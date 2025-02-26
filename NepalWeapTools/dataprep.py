@@ -25,6 +25,7 @@ Evaluation And Planning (WEAP) software.
 import numpy as np
 import pandas as pd
 import os
+import datetime as dt
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
@@ -59,22 +60,40 @@ class HydroData:
         True if the file was loaded successfully, False otherwise.
         
         Notes:
-        file_name will be deprecated once data is stored in a static path relative to the module.
-        User will then just input the station list.
+        - file_name will be deprecated once data is stored in a static path relative to the module.
+        - User will then just input the station list.
+        - Dates must be in a valid ISO8601 format as per datetime.date.fromisoformat()
         """
+        #------------TODO: Move this to util module---------------
+        def date_standardiser(date_string):
+            """Convert date string to YYYY-MM-DD"""
+            # Try to parse the date_string assuming its in an ISO format
+            date_object = dt.date.fromisoformat(date_string)               
+            # If successful, format the date_object to 'YYYY-MM-DD' and return it
+            return date_object.strftime('%Y-%m-%d')
+            
+        #----------------------------------
         
+        self.mc_start = date_standardiser(model_cal_start)
+        self.mc_end = date_standardiser(model_cal_end)
+        print(f'Start: {self.mc_start}, End: {self.mc_end}')
         #Get the directory relative to the current script (dataprep.py)
         current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        print(current_dir)
         #Construct the path to the InputData folder
         input_data_path = os.path.join(current_dir, r'InputData\Hydro')
-        print(input_data_path)
         #Add the file name to the path:
         self.data_path = os.path.join(input_data_path, file_name)
-        print('data path:', self.data_path)
         
+        #Read in the excel file:
         sf_data = pd.read_excel(self.data_path, station_list[0])
-        print(sf_data)
+        #Convert date to sensible format and set it as the index:
+        sf_data['Date'] = pd.to_datetime(sf_data['Date'])
+        sf_data = sf_data.set_index('Date')
+        
+        #Get only the dates in the specified window:
+        self.base_data = sf_data[model_cal_start:model_cal_end]
+        print(self.base_data)
+        
         pass
         
     def __str__(self):
