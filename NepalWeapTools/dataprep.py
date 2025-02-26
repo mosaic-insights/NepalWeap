@@ -24,6 +24,7 @@ Evaluation And Planning (WEAP) software.
 ####### Module Imports: #######
 import numpy as np
 import pandas as pd
+import os
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
@@ -61,6 +62,19 @@ class HydroData:
         file_name will be deprecated once data is stored in a static path relative to the module.
         User will then just input the station list.
         """
+        
+        #Get the directory relative to the current script (dataprep.py)
+        current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        print(current_dir)
+        #Construct the path to the InputData folder
+        input_data_path = os.path.join(current_dir, r'InputData\Hydro')
+        print(input_data_path)
+        #Add the file name to the path:
+        self.data_path = os.path.join(input_data_path, file_name)
+        print('data path:', self.data_path)
+        
+        sf_data = pd.read_excel(self.data_path, station_list[0])
+        print(sf_data)
         pass
         
     def __str__(self):

@@ -1,3 +1,4 @@
 InputData/
 OutputData/
 Notebooks/
+__pycache__/
