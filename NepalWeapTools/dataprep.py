@@ -39,3 +39,32 @@ def main():
     
 if __name__ == '__main__':
     main()
+
+####### Hydro data: #######
+
+class HydroData:
+    
+    def __init__(self):
+        """
+        Placeholder init function. This will do most of the work
+        """
+        pass
+        
+    def __str__(self):
+        """
+        Placeholder string function
+        """
+        pass
+        
+    def to_weap_data(self):
+        """
+        Placeholder to convert to WEAP format and save as file
+        """
+        pass
+        
+    def vis(self):
+        """
+        Placeholder to visualise the processed data as a chart
+        """
+        pass
+
