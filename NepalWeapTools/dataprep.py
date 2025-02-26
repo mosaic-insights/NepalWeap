@@ -44,9 +44,22 @@ if __name__ == '__main__':
 
 class HydroData:
     
-    def __init__(self):
+    def __init__(self, file_name:str, station_list:list, model_cal_start:str, model_cal_end:str):
         """
-        Placeholder init function. This will do most of the work
+        Read input streamflow data file and store with instance as dataframe
+        
+        Parameters:
+        file_name: path to file with raw stream gauge data
+        station_list: list of names of stremflow gauge stations to be examined
+        model_cal_start: start date of the desired calibration time preiod in format YYYY-MM-DD
+        model_cal_end: end date of the desired calibration time preiod in format YYYY-MM-DD
+        
+        Returns:
+        True if the file was loaded successfully, False otherwise.
+        
+        Notes:
+        file_name will be deprecated once data is stored in a static path relative to the module.
+        User will then just input the station list.
         """
         pass
         
