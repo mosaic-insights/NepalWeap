@@ -46,7 +46,13 @@ if __name__ == '__main__':
 
 class HydroData:
     
-    def __init__(self, file_name:str, station_list:list, model_cal_start:str, model_cal_end:str):
+    def __init__(self, file_name:str,
+        station_list:list,
+        model_cal_start:str,
+        model_cal_end:str,
+        measure:str='streamflow',
+        unit:str='m3/s'
+        ):
         """
         Read input streamflow data file and store with instance as dataframe
         
@@ -55,6 +61,8 @@ class HydroData:
         station_list: list of names of stremflow gauge stations to be examined
         model_cal_start: start date of the desired calibration time preiod in format YYYY-MM-DD
         model_cal_end: end date of the desired calibration time preiod in format YYYY-MM-DD
+        measure: the type of variable included in this dataset. Defaults to streamflow
+        unit: the unit of measurement. Defaults to m3/s
         
         Returns:
         True if the file was loaded successfully, False otherwise.
@@ -64,6 +72,7 @@ class HydroData:
         - User will then just input the station list.
         - Dates must be in a valid ISO8601 format as per datetime.date.fromisoformat()
         - Names of stations in the station list must exactly match the worksheet names
+        - This code assumes there is only one variable per worksheet
         """
         #------------TODO: Move this to util module---------------
         def date_standardiser(date_string):
@@ -78,13 +87,15 @@ class HydroData:
             
         #----------------------------------
         
+        #Store the 
+        self.measure = measure
+        self.unit = unit
         #Load date info for this instance:
         self.mc_start = date_standardiser(model_cal_start)
         self.mc_end = date_standardiser(model_cal_end)
         date_array = pd.date_range(start=self.mc_start, end=self.mc_end).date
         self.date_range = [date.strftime('%Y-%m-%d') for date in date_array]
         
-        print(f'Start: {self.mc_start}, End: {self.mc_end}')
         
         #Get the directory relative to the current script (dataprep.py)
         current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -92,6 +103,10 @@ class HydroData:
         input_data_path = os.path.join(current_dir, r'InputData\Hydro')
         #Add the file name to the path:
         self.data_path = os.path.join(input_data_path, file_name)
+        #Same for output location:
+        self.output_loc = os.path.join(current_dir, r'OutputData')
+        
+        
         
         #Load an empty dataframe with dates as the index:
         self.base_data = pd.DataFrame(index=self.date_range)
@@ -103,21 +118,19 @@ class HydroData:
             sf_data = pd.read_excel(self.data_path, station, parse_dates=['Date'])
             #Standardise the date:
             sf_data['Date'] = sf_data['Date'].apply(date_standardiser)
-            sf_data.rename(columns={'Streamflow m3/s': station}, inplace=True)
             sf_data.set_index('Date', inplace=True)
+            sf_data.columns=[''.join([station, ' [', self.unit, ']'])]
             #Merge with the existing base_data
             self.base_data = self.base_data.merge(sf_data, left_index=True, right_index=True, how='left')
         
         
         
         
-        pass
-        
     def __str__(self):
         """
         Placeholder string function
         """
-        pass
+        return f'Hydro data with {self.measure} measurements in {self.unit} from {self.mc_start} to {self.mc_end}.'
         
     def to_weap_data(self):
         """
