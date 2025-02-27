@@ -63,20 +63,29 @@ class HydroData:
         - file_name will be deprecated once data is stored in a static path relative to the module.
         - User will then just input the station list.
         - Dates must be in a valid ISO8601 format as per datetime.date.fromisoformat()
+        - Names of stations in the station list must exactly match the worksheet names
         """
         #------------TODO: Move this to util module---------------
         def date_standardiser(date_string):
             """Convert date string to YYYY-MM-DD"""
             # Try to parse the date_string assuming its in an ISO format
-            date_object = dt.date.fromisoformat(date_string)               
+            try:
+                date_object = dt.datetime.fromisoformat(str(date_string)).date() 
+            except ValueError:
+                date_object = dt.datetime.strptime(date_string, '%d/%b/%Y').date()
             # If successful, format the date_object to 'YYYY-MM-DD' and return it
             return date_object.strftime('%Y-%m-%d')
             
         #----------------------------------
         
+        #Load date info for this instance:
         self.mc_start = date_standardiser(model_cal_start)
         self.mc_end = date_standardiser(model_cal_end)
+        date_array = pd.date_range(start=self.mc_start, end=self.mc_end).date
+        self.date_range = [date.strftime('%Y-%m-%d') for date in date_array]
+        
         print(f'Start: {self.mc_start}, End: {self.mc_end}')
+        
         #Get the directory relative to the current script (dataprep.py)
         current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         #Construct the path to the InputData folder
@@ -84,15 +93,23 @@ class HydroData:
         #Add the file name to the path:
         self.data_path = os.path.join(input_data_path, file_name)
         
-        #Read in the excel file:
-        sf_data = pd.read_excel(self.data_path, station_list[0])
-        #Convert date to sensible format and set it as the index:
-        sf_data['Date'] = pd.to_datetime(sf_data['Date'])
-        sf_data = sf_data.set_index('Date')
+        #Load an empty dataframe with dates as the index:
+        self.base_data = pd.DataFrame(index=self.date_range)
         
-        #Get only the dates in the specified window:
-        self.base_data = sf_data[model_cal_start:model_cal_end]
-        print(self.base_data)
+        
+        #Go through each station in the station list and load the data:
+        for station in station_list:
+            #Read in the excel file:
+            sf_data = pd.read_excel(self.data_path, station, parse_dates=['Date'])
+            #Standardise the date:
+            sf_data['Date'] = sf_data['Date'].apply(date_standardiser)
+            sf_data.rename(columns={'Streamflow m3/s': station}, inplace=True)
+            sf_data.set_index('Date', inplace=True)
+            #Merge with the existing base_data
+            self.base_data = self.base_data.merge(sf_data, left_index=True, right_index=True, how='left')
+        
+        
+        
         
         pass
         
