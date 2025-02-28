@@ -160,8 +160,8 @@ class MeasVar:
         dataframe,
         measure:str,
         date_range:list,
+        parent,
         unit:str='Unspecified',
-        parent=None,
         skipped_rows:int=0
         ):
         """
@@ -177,8 +177,31 @@ class MeasVar:
         self.base_data = pd.DataFrame(index=self.date_range)
         self.base_data = self.base_data.merge(dataframe, left_index=True, right_index=True, how='left')
         
+    def to_weap_data(self):
+        """
+        Reformat the base_data to match WEAP's required CSV format, and write it as a file to the instance's
+        output location.
         
-        pass
+        --------------
+        TODO: see if this can be added to a parent class, or util module
+        -------------
+        """
+        #Get an updated copy of the base_data with the date moved out of the index, leaving the original untouched:
+        w_data = self.base_data.reset_index(names='$Columns = Date')
+        num_blanks  = [ '' for i in range(len(w_data.columns) - 1)]
+        #Add lines to match required formatting of WEAP files:
+        w_data.columns = pd.MultiIndex.from_tuples(
+            zip(
+                ['$ListSeparator = ,'] + num_blanks,
+                ['$DecimalSymbol = .'] + num_blanks,
+                w_data.columns
+            )
+        )
+        
+        #Write to csv in the output folder:
+        w_data.to_csv(rf'{self.parent.output_loc}\{self.parent.input_file_name}_{self.measure}.csv', index=False)
+        
+        return True
         
     def __str__(self):
         """Define how to represent this as a string"""
