@@ -156,12 +156,28 @@ class HydroData:
 
 class MeasVar:
     
-    def __init__(self, measure:str, unit:str):
+    def __init__(self,
+        dataframe,
+        measure:str,
+        date_range:list,
+        unit:str='Unspecified',
+        parent=None,
+        skipped_rows:int=0
+        ):
         """
         
         """
         self.measure = measure
+        self.date_range = date_range
         self.unit = unit
+        self.parent = parent
+        self.skipped_rows = skipped_rows
+        
+        print(f'{self.skipped_rows} rows were skipped due to invalid date formats')
+        #Load an empty dataframe with dates as the index:
+        self.base_data = pd.DataFrame(index=self.date_range)
+        
+        
         pass
 
 class MeteoData:
@@ -210,4 +226,30 @@ class MeteoData:
         self.input_file = pd.ExcelFile(self.data_path)
         checked_measures = util.compare_sheet_names(self.input_file.sheet_names, measurements)
         
+        self.datasets = []
+        #Create a MeasVar instance for each of the desired measurements:
+        for variable in checked_measures:
+            #Get the worksheet corresponding to the current variable
+            this_df = pd.read_excel(self.data_path, variable, parse_dates=['Date'])
+            og_length = this_df.shape[0]
+            
+            #Standardise the date column and set it as the index:
+            this_df['Date'] = this_df['Date'].apply(util.date_standardiser)
+            this_df = this_df.dropna(subset=['Date'])
+            new_length = this_df.shape[0]
+            skipped_rows = og_length - new_length
+            this_df.set_index('Date', inplace=True)
+            
+            #Only get columns matching stations in our desired list:
+            this_df = this_df.loc[:, this_df.columns.isin(self.stations)]
+            #Create a linked MeasVar instance to store it as a formatted dataset:
+            dataset = MeasVar(
+                this_df,
+                variable,
+                self.date_range,
+                parent=self,
+                skipped_rows=skipped_rows
+            )
+            #Add the MeasVar to the list of this instance's linked datasets:
+            self.datasets.append(dataset)
         

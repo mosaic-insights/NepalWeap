@@ -28,7 +28,13 @@ def date_standardiser(date_string):
     try:
         date_object = dt.datetime.fromisoformat(str(date_string)).date() 
     except ValueError:
-        date_object = dt.datetime.strptime(date_string, '%d/%b/%Y').date()
+        try:
+            date_object = dt.datetime.strptime(date_string, '%d/%b/%Y').date()
+        except ValueError:
+            try:
+                date_object = dt.datetime.strptime(date_string, '%m/%d/%Y').date()
+            except ValueError:
+                return None
     # If successful, format the date_object to 'YYYY-MM-DD' and return it
     return date_object.strftime('%Y-%m-%d')
 
