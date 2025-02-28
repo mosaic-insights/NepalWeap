@@ -173,9 +173,9 @@ class MeasVar:
         self.parent = parent
         self.skipped_rows = skipped_rows
         
-        print(f'{self.skipped_rows} rows were skipped due to invalid date formats')
         #Load an empty dataframe with dates as the index:
         self.base_data = pd.DataFrame(index=self.date_range)
+        self.base_data = self.base_data.merge(dataframe, left_index=True, right_index=True, how='left')
         
         
         pass
