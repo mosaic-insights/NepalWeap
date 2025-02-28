@@ -179,6 +179,13 @@ class MeasVar:
         
         
         pass
+        
+    def __str__(self):
+        """Define how to represent this as a string"""
+        output_string = 'Set of {} recordings between {} and {}, for {} stations.'.format(
+            self.measure, self.date_range[0], self.date_range[-1], len(self.base_data.columns)
+        )
+        return output_string
 
 class MeteoData:
     
