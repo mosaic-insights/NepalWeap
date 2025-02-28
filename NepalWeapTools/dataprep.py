@@ -22,10 +22,10 @@ Evaluation And Planning (WEAP) software.
 ------------------------------------------------------------------------
 """
 ####### Module Imports: #######
+from . import util
 import numpy as np
 import pandas as pd
 import os
-import datetime as dt
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
@@ -74,26 +74,14 @@ class HydroData:
         - Names of stations in the station list must exactly match the worksheet names
         - This code assumes there is only one variable per worksheet
         """
-        #------------TODO: Move this to util module---------------
-        def date_standardiser(date_string):
-            """Convert date string to YYYY-MM-DD"""
-            # Try to parse the date_string assuming its in an ISO format
-            try:
-                date_object = dt.datetime.fromisoformat(str(date_string)).date() 
-            except ValueError:
-                date_object = dt.datetime.strptime(date_string, '%d/%b/%Y').date()
-            # If successful, format the date_object to 'YYYY-MM-DD' and return it
-            return date_object.strftime('%Y-%m-%d')
-            
-        #----------------------------------
         
         #Store the 
         self.input_file = file_name.split('.')[0]
         self.measure = measure
         self.unit = unit
         #Load date info for this instance:
-        self.mc_start = date_standardiser(model_cal_start)
-        self.mc_end = date_standardiser(model_cal_end)
+        self.mc_start = util.date_standardiser(model_cal_start)
+        self.mc_end = util.date_standardiser(model_cal_end)
         date_array = pd.date_range(start=self.mc_start, end=self.mc_end).date
         self.date_range = [date.strftime('%Y-%m-%d') for date in date_array]
         
@@ -118,7 +106,7 @@ class HydroData:
             #Read in the excel file:
             sf_data = pd.read_excel(self.data_path, station, parse_dates=['Date'])
             #Standardise the date:
-            sf_data['Date'] = sf_data['Date'].apply(date_standardiser)
+            sf_data['Date'] = sf_data['Date'].apply(util.date_standardiser)
             sf_data.set_index('Date', inplace=True)
             sf_data.columns=[''.join([station, ' [', self.unit, ']'])]
             #Merge with the existing base_data
