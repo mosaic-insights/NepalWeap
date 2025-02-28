@@ -32,3 +32,19 @@ def date_standardiser(date_string):
     # If successful, format the date_object to 'YYYY-MM-DD' and return it
     return date_object.strftime('%Y-%m-%d')
 
+def compare_sheet_names(sheet_names:list, measurements:list):
+    """Remove measurements from list if they're not in sheet_names"""
+    #Get the set of strings in both:
+    matches = set(sheet_names) & set(measurements)
+    
+    #If there's none, raise an error:
+    if not matches:
+        raise ValueError('None of the provided measurements matched worksheet names.')
+    
+    #Get the unmatched ones:
+    unmatched = set(measurements) - set(sheet_names)
+    if unmatched:
+        print(f'Warning: {unmatched} were not found in Excel file and have been removed')
+    
+    new_meas = [a for a in measurements if a in sheet_names]
+    return new_meas

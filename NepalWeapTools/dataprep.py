@@ -153,3 +153,61 @@ class HydroData:
         """
         pass
 
+
+class MeasVar:
+    
+    def __init__(self, measure:str, unit:str):
+        """
+        
+        """
+        self.measure = measure
+        self.unit = unit
+        pass
+
+class MeteoData:
+    
+    def __init__(self, file_name:str,
+        station_list:list,
+        model_cal_start:str,
+        model_cal_end:str,
+        measurements:list=['Precip', 'Temp_max', 'Temp_min', 'Relative humidity']
+        ):
+        """
+        
+        Parameters:
+        file_name: filename.ext string for Excel spreadsheet with meteorological data
+        station_list: list of strings representing station names. Must match column names in worksheets
+        model_cal_start: start date of the desired calibration time period
+        model_cal_end: end date of the desired calibration time period
+        measurements: list of meteorological variables to include. Must match worksheet names in spreadsheet
+        
+        Notes:
+        - Climate data are stored in one excel file, with a worksheet for each variable.
+        - Each worksheet has a column for each weather station
+        - Start and end dates must be in a valid ISO8601 format as per datetime.datetime.fromisoformat()
+        """
+        
+        #Store the basic info in this instance
+        self.input_file_name = file_name.split('.')[0]
+        self.stations = station_list
+        
+        #Load date info for this instance:
+        self.mc_start = util.date_standardiser(model_cal_start)
+        self.mc_end = util.date_standardiser(model_cal_end)
+        date_array = pd.date_range(start=self.mc_start, end=self.mc_end).date
+        self.date_range = [date.strftime('%Y-%m-%d') for date in date_array]
+        
+        #Get the directory relative to the current script (dataprep.py)
+        current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        #Construct the path to the InputData folder
+        input_data_path = os.path.join(current_dir, r'InputData\Meteo')
+        #Add the file name to the path:
+        self.data_path = os.path.join(input_data_path, file_name)
+        #Same for output location:
+        self.output_loc = os.path.join(current_dir, r'OutputData')
+        
+        #Load the excel file and work out what variables are included
+        self.input_file = pd.ExcelFile(self.data_path)
+        checked_measures = util.compare_sheet_names(self.input_file.sheet_names, measurements)
+        
+        
