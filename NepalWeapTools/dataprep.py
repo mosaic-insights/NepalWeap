@@ -88,6 +88,7 @@ class HydroData:
         #----------------------------------
         
         #Store the 
+        self.input_file = file_name.split('.')[0]
         self.measure = measure
         self.unit = unit
         #Load date info for this instance:
@@ -134,9 +135,29 @@ class HydroData:
         
     def to_weap_data(self):
         """
-        Placeholder to convert to WEAP format and save as file
+        Reformat the base_data to match WEAP's required CSV format, and write it as a file to the instance's
+        output location.
+        
+        --------------
+        TODO: see if this can be added to a parent class, or util module
+        -------------
         """
-        pass
+        #Get an updated copy of the base_data with the date moved out of the index, leaving the original untouched:
+        sf_data2 = self.base_data.reset_index(names='$Columns = Date')
+        num_blanks  = [ '' for i in range(len(sf_data2.columns) - 1)]
+        #Add lines to match required formatting of WEAP files:
+        sf_data2.columns = pd.MultiIndex.from_tuples(
+            zip(
+                ['$ListSeparator = ,'] + num_blanks,
+                ['$DecimalSymbol = .'] + num_blanks,
+                sf_data2.columns
+            )
+        )
+        
+        #Write to csv in the output folder:
+        sf_data2.to_csv(rf'{self.output_loc}\{self.input_file}_{self.measure}.csv', index=False)
+        
+        return True
         
     def vis(self):
         """
