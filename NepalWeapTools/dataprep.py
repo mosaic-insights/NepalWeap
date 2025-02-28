@@ -42,116 +42,7 @@ def main():
 if __name__ == '__main__':
     main()
 
-####### Hydro data: #######
 
-class HydroData:
-    
-    def __init__(self, file_name:str,
-        station_list:list,
-        model_cal_start:str,
-        model_cal_end:str,
-        measure:str='streamflow',
-        unit:str='m3/s'
-        ):
-        """
-        Read input streamflow data file and store with instance as dataframe
-        
-        Parameters:
-        file_name: path to file with raw stream gauge data
-        station_list: list of names of stremflow gauge stations to be examined
-        model_cal_start: start date of the desired calibration time preiod in format YYYY-MM-DD
-        model_cal_end: end date of the desired calibration time preiod in format YYYY-MM-DD
-        measure: the type of variable included in this dataset. Defaults to streamflow
-        unit: the unit of measurement. Defaults to m3/s
-        
-        Returns:
-        True if the file was loaded successfully, False otherwise.
-        
-        Notes:
-        - file_name will be deprecated once data is stored in a static path relative to the module.
-        - User will then just input the station list.
-        - Dates must be in a valid ISO8601 format as per datetime.date.fromisoformat()
-        - Names of stations in the station list must exactly match the worksheet names
-        - This code assumes there is only one variable per worksheet
-        """
-        
-        #Store the 
-        self.input_file = file_name.split('.')[0]
-        self.measure = measure
-        self.unit = unit
-        #Load date info for this instance:
-        self.mc_start = util.date_standardiser(model_cal_start)
-        self.mc_end = util.date_standardiser(model_cal_end)
-        date_array = pd.date_range(start=self.mc_start, end=self.mc_end).date
-        self.date_range = [date.strftime('%Y-%m-%d') for date in date_array]
-        
-        
-        #Get the directory relative to the current script (dataprep.py)
-        current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        #Construct the path to the InputData folder
-        input_data_path = os.path.join(current_dir, r'InputData\Hydro')
-        #Add the file name to the path:
-        self.data_path = os.path.join(input_data_path, file_name)
-        #Same for output location:
-        self.output_loc = os.path.join(current_dir, r'OutputData')
-        
-        
-        
-        #Load an empty dataframe with dates as the index:
-        self.base_data = pd.DataFrame(index=self.date_range)
-        
-        
-        #Go through each station in the station list and load the data:
-        for station in station_list:
-            #Read in the excel file:
-            sf_data = pd.read_excel(self.data_path, station, parse_dates=['Date'])
-            #Standardise the date:
-            sf_data['Date'] = sf_data['Date'].apply(util.date_standardiser)
-            sf_data.set_index('Date', inplace=True)
-            sf_data.columns=[''.join([station, ' [', self.unit, ']'])]
-            #Merge with the existing base_data
-            self.base_data = self.base_data.merge(sf_data, left_index=True, right_index=True, how='left')
-        
-        
-        
-        
-    def __str__(self):
-        """
-        Placeholder string function
-        """
-        return f'Hydro data with {self.measure} measurements in {self.unit} from {self.mc_start} to {self.mc_end}.'
-        
-    def to_weap_data(self):
-        """
-        Reformat the base_data to match WEAP's required CSV format, and write it as a file to the instance's
-        output location.
-        
-        --------------
-        TODO: see if this can be added to a parent class, or util module
-        -------------
-        """
-        #Get an updated copy of the base_data with the date moved out of the index, leaving the original untouched:
-        sf_data2 = self.base_data.reset_index(names='$Columns = Date')
-        num_blanks  = [ '' for i in range(len(sf_data2.columns) - 1)]
-        #Add lines to match required formatting of WEAP files:
-        sf_data2.columns = pd.MultiIndex.from_tuples(
-            zip(
-                ['$ListSeparator = ,'] + num_blanks,
-                ['$DecimalSymbol = .'] + num_blanks,
-                sf_data2.columns
-            )
-        )
-        
-        #Write to csv in the output folder:
-        sf_data2.to_csv(rf'{self.output_loc}\{self.input_file}_{self.measure}.csv', index=False)
-        
-        return True
-        
-    def vis(self):
-        """
-        Placeholder to visualise the processed data as a chart
-        """
-        pass
 
 
 class MeasVar:
@@ -188,6 +79,9 @@ class MeasVar:
         """
         #Get an updated copy of the base_data with the date moved out of the index, leaving the original untouched:
         w_data = self.base_data.reset_index(names='$Columns = Date')
+        if self.unit != 'Unspecified':
+            w_data.columns = [col + f' [{self.unit}]' for col in w_data.columns]
+            
         num_blanks  = [ '' for i in range(len(w_data.columns) - 1)]
         #Add lines to match required formatting of WEAP files:
         w_data.columns = pd.MultiIndex.from_tuples(
@@ -209,6 +103,104 @@ class MeasVar:
             self.measure, self.date_range[0], self.date_range[-1], len(self.base_data.columns)
         )
         return output_string
+
+####### Hydro data: #######
+
+class HydroData:
+    
+    def __init__(self, file_name:str,
+        station_list:list,
+        model_cal_start:str,
+        model_cal_end:str,
+        measurements:list=['Streamflow'],
+        units:list=['m3/s']
+        ):
+        """
+        Read input streamflow data file and store with instance as dataframe
+        
+        Parameters:
+        file_name: path to file with raw stream gauge data
+        station_list: list of names of streamflow gauge stations to be examined. Must match worksheet names
+        model_cal_start: start date of the desired calibration time preiod in format YYYY-MM-DD
+        model_cal_end: end date of the desired calibration time preiod in format YYYY-MM-DD
+        measurements: list of hydrological variables to include
+        units: list of strings representing units of the corresponding entries in measurements
+        
+        Notes:
+        - file_name will be deprecated once data is stored in a static path relative to the module.
+        - User will then just input the station list.
+        - Dates must be in a valid ISO8601 format as per datetime.date.fromisoformat()
+        - Names of stations in the station list must exactly match the worksheet names
+        - This code assumes there is only one variable per worksheet
+        """
+        
+        #Get the directory relative to the current script (dataprep.py)
+        current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        #Construct the path to the InputData folder
+        input_data_path = os.path.join(current_dir, r'InputData\Hydro')
+        #Add the file name to the path:
+        self.data_path = os.path.join(input_data_path, file_name)
+        #Same for output location:
+        self.output_loc = os.path.join(current_dir, r'OutputData')
+        
+        #Store the basic info in this instance
+        self.input_file_name = file_name.split('.')[0]
+        self.stations = station_list
+        self.measurements = measurements
+        
+        #Load date info for this instance:
+        self.mc_start = util.date_standardiser(model_cal_start)
+        self.mc_end = util.date_standardiser(model_cal_end)
+        date_array = pd.date_range(start=self.mc_start, end=self.mc_end).date
+        self.date_range = [date.strftime('%Y-%m-%d') for date in date_array]
+        
+        #Load the excel file and work out what variables are included
+        self.input_file = pd.ExcelFile(self.data_path)
+        checked_stations = util.compare_sheet_names(self.input_file.sheet_names, self.stations)
+        
+        self.datasets = []
+        #Create a dummy df to merge the values for each station into:            
+        base_var_df = pd.DataFrame(index=self.date_range)
+        
+        #Go through each measurement type:
+        for variable in self.measurements:
+            current_index = 0
+            skipped_rows = 0            
+            #Go through each station in the station list and load the data:
+            for station in station_list:
+                #Read in the excel file:
+                this_df = pd.read_excel(self.data_path, station, parse_dates=['Date'])
+                #Standardise the date:
+                og_length = this_df.shape[0]
+                this_df['Date'] = this_df['Date'].apply(util.date_standardiser)
+                this_df = this_df.dropna(subset=['Date'])
+                new_length = this_df.shape[0]
+                skipped_rows += (og_length - new_length)
+                this_df.set_index('Date', inplace=True)
+                this_df.columns=[station]
+                base_var_df = base_var_df.merge(this_df, left_index=True, right_index=True, how='left')
+            
+            #Create a linked MeasVar instance to store it as a formatted dataset:
+            dataset = MeasVar(
+                base_var_df,
+                variable,
+                self.date_range,
+                parent=self,
+                unit=units[current_index],
+                skipped_rows=skipped_rows
+            )
+            #Add the MeasVar to the list of this instance's linked datasets:
+            self.datasets.append(dataset)
+            current_index += 1
+        
+        
+    def __str__(self):
+        """
+        Placeholder string function
+        """
+        return f'Hydro data with {len(self.datasets)} measurements .'
+        
+
 
 class MeteoData:
     
@@ -283,3 +275,9 @@ class MeteoData:
             #Add the MeasVar to the list of this instance's linked datasets:
             self.datasets.append(dataset)
         
+        
+        def __str__(self):
+            """
+            Placeholder string function
+            """
+            return f'Meteo data with {len(self.datasets)} measurements .'
