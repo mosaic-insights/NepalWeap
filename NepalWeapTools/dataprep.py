@@ -28,6 +28,8 @@ import pandas as pd
 import os
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import rasterio as rio
+from rasterstats import zonal_stats
 
 ####### For when module is run directly: #######
 def main():
@@ -285,13 +287,20 @@ class MeteoData:
 
 class LulcData:
     
-    def __init(self):
+    def __init(self, lulc_raster:str, sub_catchments:str):
         """
-        Placeholder init function
+        Load summary statistics for Land Use / Land Cover data by subcatchment
+        
+        Parameters:
+        lulc_raster: path to a raster with values for LULC ICIMOD land use classification
+        sub_catchments: path to a shapefile of subcatchment areas
+        
+        Notes:
+        - LULC raster MUST be an integer raster which corresponds to standard ICIMOD classifications
         """
         pass
         
     def __str__(self):
-        """Placeholder string function"""
+        """Define what to show when instance is presented as a string"""
         pass
         
