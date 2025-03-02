@@ -281,3 +281,17 @@ class MeteoData:
             Placeholder string function
             """
             return f'Meteo data with {len(self.datasets)} measurements .'
+            
+
+class LulcData:
+    
+    def __init(self):
+        """
+        Placeholder init function
+        """
+        pass
+        
+    def __str__(self):
+        """Placeholder string function"""
+        pass
+        
