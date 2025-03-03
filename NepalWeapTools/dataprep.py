@@ -359,10 +359,20 @@ class LulcData:
             icimod_lulc_class_dict
         )
         
-    def to_weap_data(self, start_year=2000, end_year=2021):
+        
+    def to_weap_data(self, start_year:int=2000, end_year:int=2021):
         """
         Reformat the base_data to match WEAP's required CSV format, and write it as a file to the instance's
         output location.
+        
+        Parameters:
+        start_year: first year in the desired modelling timeframe
+        end_year: last year in the desired modelling timeframe.
+        
+        Notes:
+        - Will create a CSV for each subcatchment in this LulcData instance's subcatchment
+        - Output files have a row for each year, but the data is the same for each row. This is not intended
+        to actually model land use classifications at a particular point in time.
         """
         name_header = 'Subcatchment Name'
         out_stats_all = self.raw_stats.reset_index(names=name_header)
@@ -408,9 +418,8 @@ class LulcData:
             for land_use in selected_LULC:
                 time_series_df[land_use] = row[land_use]
             
-            
-            num_blanks  = [ '' for i in range(len(time_series_df.columns) - 1)]
             #Add lines to match required formatting of WEAP files:
+            num_blanks  = [ '' for i in range(len(time_series_df.columns) - 1)]
             time_series_df.columns = pd.MultiIndex.from_tuples(
                 zip(
                     [f'# Catchment {subcatchment}'] + num_blanks,
@@ -419,6 +428,8 @@ class LulcData:
                     time_series_df.columns
                 )
             )
+            
+            #Write file to CSV with sensible name
             area = self.input_vector_file_name.split('_')[0]
             this_filename = f'{area}_{subcatchment}_LULC_Areas'
             time_series_df.to_csv(rf'{self.output_loc}\{this_filename}.csv', index=False)
@@ -427,5 +438,5 @@ class LulcData:
         
     def __str__(self):
         """Define what to show when instance is presented as a string"""
-        pass
+        return f'Land Use/Land Cover data for {self.input_vector_file_name.split('_')[0]}.'
         
