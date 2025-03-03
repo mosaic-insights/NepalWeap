@@ -463,11 +463,48 @@ class UrbDemData:
     Placeholder docstring
     """
     
-    def __init__(self):
+    def __init__(self, municipality:str,
+        start_date:str,
+        end_date:str,
+        pop_data_file:str,
+        student_data_file:str,
+        wards_data_file:str,
+        utility_data_files:list,
+        perc_full_plumb,
+        num_hotels,
+        num_hotel_beds,
+        num_hospitals,
+        num_hospital_beds,
+        census_year:int=2021
+        ):
         """
-        placeholder docstring
+        Collate and load data required for urban water demand calculations.
+        
+        Parameters:
+        municipality: Name of the municipality (Pokhara, Tulsipur etc.) of interest
+        start_date: start date for the WEAP modelling (inclusive)
+        end_date: end date for modelling (inclusive)
+        pop_data_file: filename.ext for excel file containing population summaries per ward
+        student_data_file: filename.ext for excel file containing number of students per ward
+        wards_data_file: filename.ext for shapefile of ward boundaries
+        utility_data_files: list of filename.ext strings for shapefiles of water utility service areas
+        num_hotels: number of hotels reported in Nepal 2021 to scale OpenStreetMap data to
+        num_hotel_beds: average number of beds per hotel
+        num_hospitals: number of hospitals reported in Nepal 2021 to scale OpenStreetMap data to
+        num_hospital_beds: average number of beds per hospital
+        census_year: year the census we are using data for was conducted
+        
+        Notes:
+        - All relevant data files must be stored in the packages InputData\Demand folder
+        - Start and end dates must be in a valid ISO8601 format as per datetime.datetime.fromisoformat()
         """
         
+        #Get the directory relative to the current script (dataprep.py)
+        current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        #Construct the path to the InputData folder
+        input_data_path = os.path.join(current_dir, r'InputData\Demand')
+        #Set the location for output files:
+        self.output_loc = os.path.join(current_dir, r'OutputData')
         pass
         
     def __str__(self):
