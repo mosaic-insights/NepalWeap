@@ -44,10 +44,13 @@ def main():
 if __name__ == '__main__':
     main()
 
-
-
+####### Measured variables: #################################################
 
 class MeasVar:
+    """
+    Store data for individual variables that area measured, such as streamflow or temperature.
+    Allows broad classes to be extended to incorporate variables that are not currently included.
+    """
     
     def __init__(self,
         dataframe,
@@ -58,7 +61,16 @@ class MeasVar:
         skipped_rows:int=0
         ):
         """
+        Read and store a dataframe passed from a HydroData or MeteoData instance.
         
+        Parameters:
+        dataframe: a pandas dataframe with a row for each date and column for each station.
+        date_range: a list of observation dates to include
+        parent: the instance of HydroData or MeteoData which created this instance
+        unit: if a unit is specified or known, this will be incorporated into the output
+            column name.
+        skipped_rows: for audit trail purposes; the number of rows with date values that 
+            couldn't be handled by the source instance.
         """
         self.measure = measure
         self.date_range = date_range
@@ -74,10 +86,6 @@ class MeasVar:
         """
         Reformat the base_data to match WEAP's required CSV format, and write it as a file to the instance's
         output location.
-        
-        --------------
-        TODO: see if this can be added to a parent class, or util module
-        -------------
         """
         #Get an updated copy of the base_data with the date moved out of the index, leaving the original untouched:
         w_data = self.base_data.reset_index(names='$Columns = Date')
@@ -106,9 +114,14 @@ class MeasVar:
         )
         return output_string
 
-####### Hydro data: #######
+####### Hydro data: ########################################################
 
 class HydroData:
+    """
+    Loads and stores hydrological data, and allows it to be exported to WEAP formats.
+    Currently only streamflow is measured, but this class uses the MeasVar class in this module 
+    to handle separate variables, so is extensible to additional hydro variables.
+    """
     
     def __init__(self, file_name:str,
         station_list:list,
@@ -195,16 +208,17 @@ class HydroData:
             self.datasets.append(dataset)
             current_index += 1
         
-        
     def __str__(self):
-        """
-        Placeholder string function
-        """
+        """Define what shows when an instance is printed or shown as a string"""
         return f'Hydro data with {len(self.datasets)} measurements .'
-        
 
+####### Meteo data: ########################################################
 
 class MeteoData:
+    """
+    Loads and stores meteorological data, and allows it to be exported to WEAP formats.
+    Uses the MeasVar class in this module to handle separate variables.
+    """
     
     def __init__(self, file_name:str,
         station_list:list,
@@ -277,15 +291,18 @@ class MeteoData:
             #Add the MeasVar to the list of this instance's linked datasets:
             self.datasets.append(dataset)
         
-        
         def __str__(self):
             """
             Placeholder string function
             """
             return f'Meteo data with {len(self.datasets)} measurements .'
-            
+
+####### LULC data: ########################################################
 
 class LulcData:
+    """
+    Loads and stores land use/land cover data, and allows it to be exported to WEAP formats.
+    """
     
     def __init__(self, raster_file_name:str, vector_file_name:str, raster_res=30):
         """
@@ -358,7 +375,6 @@ class LulcData:
             self.subcatchments,
             icimod_lulc_class_dict
         )
-        
         
     def to_weap_data(self, start_year:int=2000, end_year:int=2021):
         """
