@@ -311,7 +311,8 @@ class LulcData:
             8: "Bare soil",
             9: "Bare rock",
             10: "Grassland",
-            11: "Other wooded land"
+            11: "Other wooded land",
+            15: 'None'
         }
         
         #Get and store some basic details about the input raster:
@@ -331,6 +332,14 @@ class LulcData:
             self.subcatchments = input_shape.to_crs(epsg=self.raster_info['crs'])
         else:
             self.subcatchments = input_shape
+        
+        #Get a table of pixel frequencies for each subcatchment:
+        self.raw_stats = util.get_zonal_stats(
+            self.raster_values,
+            self.raster_meta,
+            self.subcatchments,
+            icimod_lulc_class_dict
+        )
         
         pass
         

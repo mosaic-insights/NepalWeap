@@ -21,8 +21,13 @@ commonly required by the classes in the other package modules
 """
 ####### Package imports: #######
 import datetime as dt
-import rasterio
 import numpy as np
+import pandas as pd
+import rasterio
+from rasterio.io import MemoryFile
+from rasterio.mask import mask
+import geopandas as gpd
+
 
 def date_standardiser(date_string):
     """Convert date string to YYYY-MM-DD"""
@@ -88,3 +93,63 @@ def get_raster_deets(GeoTIFF):
         Meta = src.meta
         
     return RasterInfo, Array, Meta
+    
+def get_zonal_stats(in_raster, in_meta, gdf, class_dict:dict, key_field_name:str='Name'):
+    """
+    Get zonal stats for a raster without relying on rasterstats
+    
+    Parameters:
+    in_raster: numpy array representing raster values
+    in_meta: metadata dictionary associated with the raster array
+    gdf: Geopandas GeoDataFrame in the same CRS as the raster
+    class_dict: dictionary of what the numerical values in the raster corrspond to as categories
+    key_field_name: name of the field in the geodataframe which can be used to uniquely identify features
+    
+    Returns:
+    
+    """
+    #Convert numeric values in the input raster to their text equivalents:
+    print('Getting zonal stats with get_zonal_stats()...')
+    
+    raw_stats = pd.DataFrame()
+    
+    #Get the raster ready for rasterio:
+    with MemoryFile() as memfile:
+        with memfile.open(**in_meta) as dataset:
+            dataset.write(in_raster, 1)
+            
+            #Go through each feature in the input shapefile:
+            for index, feature in gdf.iterrows():
+                #Store relevant info
+                this_feature = feature
+                this_name = feature[key_field_name]
+                this_geom = feature['geometry']
+                
+                #get just the current zone
+                masked_ras, _ = mask(dataset, [this_geom], crop=True)
+                
+                #Get a dictionary with the number of times each unique element appears:
+                cats, counts = np.unique(masked_ras, return_counts=True)
+                freqs = dict(zip(cats, counts))
+                freqs['Subcatchment'] = this_name
+                
+                #Add the values to the raw_stats dataframe:
+                this_row = pd.DataFrame(freqs, index=[freqs['Subcatchment']])
+                this_row = this_row.drop('Subcatchment', axis=1)
+                raw_stats = pd.concat([raw_stats, this_row], axis=0)
+    
+    #Replace NaN values with 0 and format the dataframe for easy interpretation:
+    raw_stats = raw_stats.fillna(0).rename(class_dict, axis='columns').sort_index().sort_index(axis=1)
+    raw_stats['None'] = raw_stats.pop('None')
+    
+    return raw_stats       
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
