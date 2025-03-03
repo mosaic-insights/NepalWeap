@@ -21,6 +21,8 @@ commonly required by the classes in the other package modules
 """
 ####### Package imports: #######
 import datetime as dt
+import rasterio
+import numpy as np
 
 def date_standardiser(date_string):
     """Convert date string to YYYY-MM-DD"""
@@ -54,3 +56,35 @@ def compare_sheet_names(sheet_names:list, objects:list):
     
     new_obj = [a for a in objects if a in sheet_names]
     return new_obj
+    
+def get_raster_deets(GeoTIFF):
+    """
+    Extracts and returns a bunch of useful information about a GeoTIFF raster
+
+    Args:
+    -Raster: a 'path\filename.ext' string to the GeoTIFF raster
+
+    Returns:
+    -A dictionary with a bunch of useful info about the raster
+    -The data from the raster as a numpy ndarray
+    -The metadata as a dictionary
+    
+    Notes:
+    -The The RasterInfo and Meta dictionaries have some overlap. RasterInfo is meant for easy access in other lines of code,
+    Meta is designed to be attachable when the raster is processed or written as a GeoTIFF.
+    """
+    with rasterio.open(GeoTIFF) as src:
+        RasterInfo = {}
+        RasterInfo['crs'] =  int(src.crs.to_epsg())
+        RasterInfo['minx'] = src.bounds[0]
+        RasterInfo['miny'] = src.bounds[1]
+        RasterInfo['maxx'] = src.bounds[2]
+        RasterInfo['maxy'] = src.bounds[3]
+        RasterInfo['transform'] = src.transform
+        RasterInfo['cellsize'] = src.res
+        RasterInfo['width'] = RasterInfo['maxx'] - RasterInfo['minx']
+        RasterInfo['height'] = RasterInfo['maxy'] - RasterInfo['miny']
+        Array = src.read(1)
+        Meta = src.meta
+        
+    return RasterInfo, Array, Meta

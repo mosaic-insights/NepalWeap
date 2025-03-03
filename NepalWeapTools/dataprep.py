@@ -29,7 +29,6 @@ import os
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import rasterio as rio
-from rasterstats import zonal_stats
 
 ####### For when module is run directly: #######
 def main():
@@ -287,17 +286,42 @@ class MeteoData:
 
 class LulcData:
     
-    def __init(self, lulc_raster:str, sub_catchments:str):
+    def __init__(self, lulc_raster:str, sub_catchments:str, raster_res=30):
         """
         Load summary statistics for Land Use / Land Cover data by subcatchment
         
         Parameters:
         lulc_raster: path to a raster with values for LULC ICIMOD land use classification
         sub_catchments: path to a shapefile of subcatchment areas
+        raster_ras: spatial resolution (pixel size) of the input raster, in metres
         
         Notes:
         - LULC raster MUST be an integer raster which corresponds to standard ICIMOD classifications
         """
+        #Define ICIMOD LULC classes from corresponding integer rasters
+        icimod_lulc_class_dict = {
+            1: "Waterbody",
+            2: "Glacier",
+            3: "Snow",
+            4: "Forest",
+            5: "Riverbed",
+            6: "Built-up area",
+            7: "Cropland",
+            8: "Bare soil",
+            9: "Bare rock",
+            10: "Grassland",
+            11: "Other wooded land"
+        }
+        
+        #Get and store some basic details about the input raster:
+        self.pixel_res = raster_res
+        self.pixel_area = self.pixel_res ** 2
+        self.pixel_area_ha = self.pixel_area / 10000
+        
+        #Get key components of the raster file and store them in the class instance:
+        self.raster_info, self.raster_values, self.raster_meta = util.get_raster_deets(lulc_raster)
+        
+        
         pass
         
     def __str__(self):
