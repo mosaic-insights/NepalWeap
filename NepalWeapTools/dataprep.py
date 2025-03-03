@@ -287,18 +287,36 @@ class MeteoData:
 
 class LulcData:
     
-    def __init__(self, lulc_raster:str, sub_catchments:str, raster_res=30):
+    def __init__(self, raster_file_name:str, vector_file_name:str, raster_res=30):
         """
         Load summary statistics for Land Use / Land Cover data by subcatchment
         
         Parameters:
-        lulc_raster: path to a raster with values for LULC ICIMOD land use classification
-        sub_catchments: path to a shapefile of subcatchment areas
-        raster_ras: spatial resolution (pixel size) of the input raster, in metres
+        raster_file_name: filename.ext for a raster with values for LULC ICIMOD land use classification
+        vector_file_name: filename.ext for a shapefile of subcatchment areas
+        raster_res: spatial resolution (pixel size) of the input raster, in metres
         
         Notes:
         - LULC raster MUST be an integer raster which corresponds to standard ICIMOD classifications
+        
         """
+        #Get names of the input files:
+        self.input_raster_file_name = raster_file_name.split('.')[0]
+        self.input_vector_file_name = vector_file_name.split('.')[0]
+        #Get the directory relative to the current script (dataprep.py)
+        current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        
+        #Construct the paths to the InputData folders
+        input_raster_path = os.path.join(current_dir, r'InputData\LandUse')
+        input_vector_path = os.path.join(current_dir, r'InputData\Catchments')
+        
+        #Add the file names to the paths:
+        self.raster_data_path = os.path.join(input_raster_path, raster_file_name)
+        self.vector_data_path = os.path.join(input_vector_path, vector_file_name)
+        
+        #Same for output location:
+        self.output_loc = os.path.join(current_dir, r'OutputData')
+        
         #Define ICIMOD LULC classes from corresponding integer rasters
         icimod_lulc_class_dict = {
             1: "Waterbody",
@@ -321,11 +339,11 @@ class LulcData:
         self.pixel_area_ha = self.pixel_area / 10000
         
         #Get key components of the raster file and store them in the class instance:
-        self.raster_info, self.raster_values, self.raster_meta = util.get_raster_deets(lulc_raster)
+        self.raster_info, self.raster_values, self.raster_meta = util.get_raster_deets(self.raster_data_path)
         print(f'Land use raster read. Its CRS is EPSG:{self.raster_info['crs']}')
         
         #Check that the shapefile is in the same CRS as the raster:
-        input_shape = gpd.read_file(sub_catchments)
+        input_shape = gpd.read_file(self.vector_data_path)
         print(f'Subcatchments shape file read. Its CRS is EPSG:{input_shape.crs.to_epsg()}')
         if input_shape.crs.to_epsg() != self.raster_info['crs']:
             print(f'Reprojecting subcatchments file to {self.raster_info['crs']}...')
@@ -341,6 +359,11 @@ class LulcData:
             icimod_lulc_class_dict
         )
         
+    def to_weap_data(self):
+        """
+        Reformat the base_data to match WEAP's required CSV format, and write it as a file to the instance's
+        output location.
+        """
         pass
         
     def __str__(self):
