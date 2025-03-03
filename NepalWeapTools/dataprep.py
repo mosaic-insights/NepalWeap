@@ -25,6 +25,7 @@ Evaluation And Planning (WEAP) software.
 from . import util
 import numpy as np
 import pandas as pd
+import geopandas as gpd
 import os
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -320,7 +321,16 @@ class LulcData:
         
         #Get key components of the raster file and store them in the class instance:
         self.raster_info, self.raster_values, self.raster_meta = util.get_raster_deets(lulc_raster)
+        print(f'Land use raster read. Its CRS is EPSG:{self.raster_info['crs']}')
         
+        #Check that the shapefile is in the same CRS as the raster:
+        input_shape = gpd.read_file(sub_catchments)
+        print(f'Subcatchments shape file read. Its CRS is EPSG:{input_shape.crs.to_epsg()}')
+        if input_shape.crs.to_epsg() != self.raster_info['crs']:
+            print(f'Reprojecting subcatchments file to {self.raster_info['crs']}...')
+            self.subcatchments = input_shape.to_crs(epsg=self.raster_info['crs'])
+        else:
+            self.subcatchments = input_shape
         
         pass
         
