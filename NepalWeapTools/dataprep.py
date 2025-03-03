@@ -475,6 +475,9 @@ class UrbDemData:
         num_hotel_beds,
         num_hospitals,
         num_hospital_beds,
+        demand_full_plumb_home:float=0.112,
+        demand_not_plumb_home:float=0.045,
+        demand_student:float=0.01,
         census_year:int=2021
         ):
         """
@@ -488,23 +491,80 @@ class UrbDemData:
         student_data_file: filename.ext for excel file containing number of students per ward
         wards_data_file: filename.ext for shapefile of ward boundaries
         utility_data_files: list of filename.ext strings for shapefiles of water utility service areas
+        perc_full_plumb: integer representing the percentage of homes in the municipality with plumbing
         num_hotels: number of hotels reported in Nepal 2021 to scale OpenStreetMap data to
         num_hotel_beds: average number of beds per hotel
         num_hospitals: number of hospitals reported in Nepal 2021 to scale OpenStreetMap data to
         num_hospital_beds: average number of beds per hospital
+        demand_full_plumb_home: assumed daily water demand, per person, in cubic metres (m3/d) for plumbed home
+        demand_not_plumb_home: assumed daily water demand, per person, in cubic metres (m3/d) for un-plumbed home
+        demand_student: assumed daily water demand per student
         census_year: year the census we are using data for was conducted
         
         Notes:
-        - All relevant data files must be stored in the packages InputData\Demand folder
+        - All relevant data files must be stored in the package's InputData\Demand folder
         - Start and end dates must be in a valid ISO8601 format as per datetime.datetime.fromisoformat()
         """
         
         #Get the directory relative to the current script (dataprep.py)
         current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         #Construct the path to the InputData folder
-        input_data_path = os.path.join(current_dir, r'InputData\Demand')
+        input_data_loc = os.path.join(current_dir, r'InputData\Demand')
         #Set the location for output files:
         self.output_loc = os.path.join(current_dir, r'OutputData')
+        
+        #Check that plumbing values are correct
+        if perc_full_plumb < 0 or perc_full_plumb > 100:
+            raise ValueError(f'perc_full_plumb must be an integer in range [0,100] but {perc_full_plumb} was provided.')
+        #Store static parameters:
+        self.municipality = municipality
+        self.start_date = util.date_standardiser(start_date)
+        self.end_date = util.date_standardiser(end_date)
+        self.propn_full_plumb = perc_full_plumb / 100
+        self.propn_not_plumb = 1 - self.propn_full_plumb
+        self.num_hotels = num_hotels
+        self.num_hotel_beds = num_hotel_beds
+        self.num_hospitals = num_hospitals
+        self.num_hospital_beds = num_hospital_beds
+        self.demand_full_plumb_home = demand_full_plumb_home
+        self.demand_not_plumb_home = demand_not_plumb_home
+        self.demand_student = demand_student
+        self.census_year = census_year
+        
+        ####### Domestic demands: #######
+        #Read in the excel file:
+        pop_data = pd.read_excel(os.path.join(input_data_loc, pop_data_file))
+        pop_data = pop_data[['Ward', 'Total population', 'Number of households', 'Average household size']]
+        
+        #Calculate a domestic demand column:
+        pop_data['Household pop'] = pop_data['Number of households'] * pop_data['Average household size']
+        pop_data['Fully plumbed pop'] = pop_data['Household pop'] * self.propn_full_plumb
+        pop_data['Not plumbed pop'] = pop_data['Household pop'] * self.propn_not_plumb
+        pop_data['Domestic demand'] = (
+            (pop_data['Fully plumbed pop'] * demand_full_plumb_home)
+            +
+            (pop_data['Not plumbed pop'] * demand_not_plumb_home)
+        )
+        #Trim the helper columns and start building a summary dataframe:
+        demand_data = pop_data.drop(labels=[
+                'Total population',
+                'Number of households',
+                'Average household size',
+                'Household pop',
+                'Fully plumbed pop',
+                'Not plumbed pop',
+            ],
+            axis='columns'
+        ).set_index('Ward')
+        
+        
+        ####### Institutional demands (educational): #######
+        #Read in the excel file:
+        inst_data = pd.read_excel(os.path.join(input_data_loc, student_data_file))
+        #Calculate the demand column:
+        inst_data['Institutional demand'] = inst_data['Currently attending'] * self.demand_student
+        
+        
         pass
         
     def __str__(self):
