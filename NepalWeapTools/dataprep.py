@@ -540,7 +540,7 @@ class UrbDemData:
         pop_data['Household pop'] = pop_data['Number of households'] * pop_data['Average household size']
         pop_data['Fully plumbed pop'] = pop_data['Household pop'] * self.propn_full_plumb
         pop_data['Not plumbed pop'] = pop_data['Household pop'] * self.propn_not_plumb
-        pop_data['Domestic demand'] = (
+        pop_data['Domestic demand [m3/d]'] = (
             (pop_data['Fully plumbed pop'] * demand_full_plumb_home)
             +
             (pop_data['Not plumbed pop'] * demand_not_plumb_home)
@@ -557,12 +557,13 @@ class UrbDemData:
             axis='columns'
         ).set_index('Ward')
         
-        
         ####### Institutional demands (educational): #######
         #Read in the excel file:
         inst_data = pd.read_excel(os.path.join(input_data_loc, student_data_file))
         #Calculate the demand column:
-        inst_data['Institutional demand'] = inst_data['Currently attending'] * self.demand_student
+        inst_data['Institutional demand [m3/d]'] = inst_data['Currently attending'] * self.demand_student
+        inst_data = inst_data.drop(labels=['Currently attending'], axis='columns').set_index('Ward')
+        demand_data = demand_data.merge(inst_data, how='outer', left_index=True, right_index=True)
         
         
         pass
