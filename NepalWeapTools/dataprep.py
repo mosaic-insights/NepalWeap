@@ -359,12 +359,71 @@ class LulcData:
             icimod_lulc_class_dict
         )
         
-    def to_weap_data(self):
+    def to_weap_data(self, start_year=2000, end_year=2021):
         """
         Reformat the base_data to match WEAP's required CSV format, and write it as a file to the instance's
         output location.
         """
-        pass
+        name_header = 'Subcatchment Name'
+        out_stats_all = self.raw_stats.reset_index(names=name_header)
+        #Convert pixel counts to areas in Ha:
+        for col in out_stats_all.columns[1:]:
+            out_stats_all[col] = out_stats_all[col] * self.pixel_area_ha
+        
+        #Combine columns to get the ones WEAP is expecting:
+        out_stats_all['Dense forest'] = out_stats_all['Forest'] + out_stats_all['Other wooded land']
+        out_stats_all['Updated grassland'] = out_stats_all['Grassland'] + out_stats_all['Bare soil'] + out_stats_all['Bare rock']
+        out_stats_all['Water'] = out_stats_all['Waterbody'] + out_stats_all['Riverbed']
+        out_stats_all = out_stats_all.rename(columns={
+            'Cropland':'Agriculture [ha]',
+            'Dense forest':'Forest [ha]',
+            'Updated grassland':'Grassland [ha]',
+            'Water':'Waterbody [ha]',
+            'Built-up area':'Urban [ha]'
+        })
+        selected_LULC = ['Agriculture [ha]', 'Forest [ha]', 'Grassland [ha]', 'Waterbody [ha]', 'Urban [ha]']
+        #List of years between start and end
+        years = list(range(start_year, end_year))
+        
+        #Dictionary to store dataframes as they are created in the next steps:
+        sub_catchment_dfs = {}
+        
+        #Loop through each subcatchment in the main one:
+        for _, row in out_stats_all.iterrows():
+            #Store current subcatchment name for the output file
+            subcatchment = row[name_header]
+            
+            #Create header lines needed for WEAP output file:
+            header_lines = [
+                [f'# Catchment {subcatchment}', '', '', ''],
+                ['$ListSeparator = ,', '', '', ''],
+                ['$DecimalSymbol = .', '', '', '']
+            ]
+            
+            #Create a dataframe with a row for each year in the modelling timeframe:
+            time_series_df = pd.DataFrame({'$Columns = Year' :years})
+            
+            #For each type of land use in selected_LULC, create a column for that LU, with the same value
+            #for each year in the time period (values will stay constant through time):
+            for land_use in selected_LULC:
+                time_series_df[land_use] = row[land_use]
+            
+            
+            num_blanks  = [ '' for i in range(len(time_series_df.columns) - 1)]
+            #Add lines to match required formatting of WEAP files:
+            time_series_df.columns = pd.MultiIndex.from_tuples(
+                zip(
+                    [f'# Catchment {subcatchment}'] + num_blanks,
+                    ['$ListSeparator = ,'] + num_blanks,
+                    ['$DecimalSymbol = .'] + num_blanks,
+                    time_series_df.columns
+                )
+            )
+            area = self.input_vector_file_name.split('_')[0]
+            this_filename = f'{area}_{subcatchment}_LULC_Areas'
+            time_series_df.to_csv(rf'{self.output_loc}\{this_filename}.csv', index=False)
+            
+        return True
         
     def __str__(self):
         """Define what to show when instance is presented as a string"""
