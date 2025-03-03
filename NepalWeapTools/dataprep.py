@@ -12,7 +12,7 @@ __maintainer__ = 'Richard Farr'
 __email__ = 'richard.farr@alluvium.com.au'
 __status__ = 'In development'
 
-Last update: 26/02/2025
+Last update: 03/03/2025
 
 ******* Description *******
 Part of the NepalWeapTools package, this module takes inputs of various 
@@ -455,4 +455,21 @@ class LulcData:
     def __str__(self):
         """Define what to show when instance is presented as a string"""
         return f'Land Use/Land Cover data for {self.input_vector_file_name.split('_')[0]}.'
+
+####### Urban Demand data: ########################################################
+
+class UrbDemData:
+    """
+    Placeholder docstring
+    """
+    
+    def __init__(self):
+        """
+        placeholder docstring
+        """
         
+        pass
+        
+    def __str__(self):
+        """Define what to show when instance is presented as a string"""
+        pass
