@@ -583,16 +583,17 @@ class UrbDemData:
             (pop_data['Not plumbed pop'] * demand_not_plumb_home)
         )
         #Trim the helper columns and start building a summary dataframe:
-        demand_data = pop_data.drop(labels=[
+        demand_data = pop_data.drop(
+            labels=[
                 'Total population',
                 'Number of households',
                 'Average household size',
                 'Household pop',
                 'Fully plumbed pop',
                 'Not plumbed pop',
-            ],
+                ],
             axis='columns'
-        ).set_index('Ward')
+            ).set_index('Ward')
         
         ####### Institutional demands (educational): ##########################
         #Read in the excel file:
@@ -612,22 +613,22 @@ class UrbDemData:
                 'num': self.num_hotels,
                 'beds': self.num_hotel_beds,
                 'dem': self.demand_hotel_bed
-            },
+                },
             'Hospital': {
                 'tag': {'amenity': 'hospital'},
                 'num': self.num_hospitals,
                 'beds': self.num_hospital_beds,
                 'dem': self.demand_hospital_bed
+                }
             }
-        }
         
         #Get a dataframe with just the census-scaled numbers for each ward:
         ward_scaled_nums = pd.DataFrame(
             self.wards[["NEW_WARD_N"]].rename(
                 {"NEW_WARD_N": 'Ward'},
                 axis=1
-            ).sort_values(by='Ward').set_index('Ward')
-        )
+                ).sort_values(by='Ward').set_index('Ward')
+            )
         dem_col_names = []
         #Populate the scaled values for each feature type:
         for key, value in frames.items():
@@ -648,45 +649,61 @@ class UrbDemData:
         temp_pop = pop_data[['Ward', 'Total population']].sort_values(by='Ward').set_index('Ward')
         ward_scaled_nums = ward_scaled_nums[dem_col_names].merge(
             temp_pop, left_index=True, right_index=True, how='left'
-        )
+            )
         ward_scaled_nums['Other demand'] = (
             (ward_scaled_nums['Total population'] / self.other_comm_denom) * self.demand_other_comm
-        )
+            )
         #Add up the three sources for total commercial demand, and join in back to the main demand DF:
         ward_scaled_nums['Commercial demand [m3/d]'] = (
             ward_scaled_nums['Hotel demand'] + 
             ward_scaled_nums['Hospital demand'] + 
             ward_scaled_nums['Other demand']
-        )
+            )
         demand_data = demand_data.merge(
             ward_scaled_nums,
             how='outer',
             left_index=True,
             right_index=True
-        ).drop(
-            ['Hotel demand',
-            'Hospital demand',
-            'Total population',
-            'Other demand'], 
-            axis=1
-        )
+            ).drop(
+                ['Hotel demand',
+                'Hospital demand',
+                'Total population',
+                'Other demand'], 
+                axis=1
+                )
         
         ####### Municipal demand: #############################################
         demand_data['Municipal demand [m3/d]'] = (
             demand_data['Domestic demand [m3/d]'] + 
             demand_data['Institutional demand [m3/d]'] + 
             demand_data['Commercial demand [m3/d]']
-        ) * self.munic_dem_propn
+            ) * self.munic_dem_propn
         
         ####### Industrial demand: ############################################
         demand_data['Industrial demand [m3/d]'] = (
             demand_data['Domestic demand [m3/d]'] + 
             demand_data['Institutional demand [m3/d]'] + 
             demand_data['Commercial demand [m3/d]']
-        ) * self.indust_dem_propn
+            ) * self.indust_dem_propn
         
-        #Load demand table into class instance:
-        self.total_demands = demand_data
+        #Bring the demands together and store with the ward geometry:
+        temp_wards = self.wards.rename(
+            {'NEW_WARD_N': 'Ward'},
+            axis=1
+            ).sort_values(by='Ward').set_index('Ward')
+        temp_wards = temp_wards.merge(
+            demand_data,
+            left_index=True,
+            right_index=True,
+            how='outer'
+            )[list(demand_data.columns) + ['geometry']]
+        
+        #Calculate total demand and store with class instance:
+        temp_wards['Total demand [m3/d]'] = (
+            temp_wards[list(demand_data.columns)].sum(axis=1)
+            )
+        self.ward_demand = temp_wards
+        
         
     def __str__(self):
         """Define what to show when instance is presented as a string"""
