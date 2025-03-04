@@ -475,9 +475,13 @@ class UrbDemData:
         num_hotel_beds,
         num_hospitals,
         num_hospital_beds,
+        demand_student:float=0.01,
         demand_full_plumb_home:float=0.112,
         demand_not_plumb_home:float=0.045,
-        demand_student:float=0.01,
+        demand_hotel_bed:float=0.2,
+        demand_hospital_bed:float=0.5,
+        demand_other_comm:float=0.01,
+        other_comm_denom=3,
         census_year:int=2021
         ):
         """
@@ -496,9 +500,14 @@ class UrbDemData:
         num_hotel_beds: average number of beds per hotel
         num_hospitals: number of hospitals reported in Nepal 2021 to scale OpenStreetMap data to
         num_hospital_beds: average number of beds per hospital
+        demand_student: assumed daily water demand per student
         demand_full_plumb_home: assumed daily water demand, per person, in cubic metres (m3/d) for plumbed home
         demand_not_plumb_home: assumed daily water demand, per person, in cubic metres (m3/d) for un-plumbed home
-        demand_student: assumed daily water demand per student
+        demand_hotel_bed: assumed daily water demand per bed, in cubic metres (m3/d) for a hotel
+        demand_hospital_bed:assumed daily water demand per bed, in cubic metres (m3/d) for a hospital
+        demand_other_comm: assumed daily water demand per commercial population, in cubic metres (m3/d)
+        other_comm_denom: denominator of the fraction of the population assumed to be commercial i.e. 3
+            means one third of the population.
         census_year: year the census we are using data for was conducted
         
         Notes:
@@ -542,9 +551,13 @@ class UrbDemData:
         self.num_hotel_beds = num_hotel_beds
         self.num_hospitals = num_hospitals
         self.num_hospital_beds = num_hospital_beds
+        self.demand_student = demand_student
         self.demand_full_plumb_home = demand_full_plumb_home
         self.demand_not_plumb_home = demand_not_plumb_home
-        self.demand_student = demand_student
+        self.demand_hotel_bed = demand_hotel_bed
+        self.demand_hospital_bed = demand_hospital_bed
+        self.demand_other_comm = demand_other_comm
+        self.other_comm_denom = other_comm_denom
         self.census_year = census_year
         
         ####### Domestic demands: #######
@@ -588,11 +601,15 @@ class UrbDemData:
         frames = {
             'Hotel': {
                 'tag': {'tourism': 'hotel'},
-                'num': self.num_hotels
+                'num': self.num_hotels,
+                'beds': self.num_hotel_beds,
+                'dem': self.demand_hotel_bed
             },
             'Hospital': {
                 'tag': {'amenity': 'hospital'},
-                'num': self.num_hospitals
+                'num': self.num_hospitals,
+                'beds': self.num_hospital_beds,
+                'dem': self.demand_hospital_bed
             }
         }
         
@@ -603,14 +620,49 @@ class UrbDemData:
                 axis=1
             ).sort_values(by='Ward').set_index('Ward')
         )
+        dem_col_names = []
         #Populate the scaled values for each feature type:
         for key, value in frames.items():
+            #Get locations
             these_locs = util.get_osm_locations(value['tag'], lat_long_bbox)
+            #Rescale values to OSM proportion of census numbers:
             this_df = util.rescale_to_census(these_locs, self.wards, value['num'], key)
+            #Calculate total beds and the demand:
+            tot_bed_col = key + ' total beds'
+            this_df[tot_bed_col] = this_df[key + ' scaled number'] * value['beds']
+            dem_col = key + ' demand'
+            dem_col_names.append(dem_col)
+            this_df[dem_col] = this_df[tot_bed_col] * value['dem']
+            #Add to the exisitng dataframe
             ward_scaled_nums = ward_scaled_nums.merge(this_df, left_index=True, right_index=True, how='left')
         
-        print(ward_scaled_nums)
-        
+        #Bring the population in and calculate 'other' commercial demand:
+        temp_pop = pop_data[['Ward', 'Total population']].sort_values(by='Ward').set_index('Ward')
+        ward_scaled_nums = ward_scaled_nums[dem_col_names].merge(
+            temp_pop, left_index=True, right_index=True, how='left'
+        )
+        ward_scaled_nums['Other demand'] = (
+            (ward_scaled_nums['Total population'] / self.other_comm_denom) * self.demand_other_comm
+        )
+        #Add up the three sources for total commercial demand, and join in back to the main demand DF:
+        ward_scaled_nums['Commercial demand [m3/d]'] = (
+            ward_scaled_nums['Hotel demand'] + 
+            ward_scaled_nums['Hospital demand'] + 
+            ward_scaled_nums['Other demand']
+        )
+        demand_data = demand_data.merge(
+            ward_scaled_nums,
+            how='outer',
+            left_index=True,
+            right_index=True
+        ).drop(
+            ['Hotel demand',
+            'Hospital demand',
+            'Total population',
+            'Other demand'], 
+            axis=1
+        )
+        print(demand_data)
         
         pass
         
