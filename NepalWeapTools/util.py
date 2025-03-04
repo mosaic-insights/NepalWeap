@@ -223,8 +223,8 @@ def rescale_to_census(locations, wards, census_num, name:str):
     
     #Scale the proportions in each ward by the total number reported in the census:
     ward_counts['scaled number'] = ward_counts['OSM proportion'] * census_num
-    
-    ward_counts.columns = [name + ' ' + header for header in ward_counts.columns]
+    ward_counts = ward_counts.drop(labels=['OSM count', 'OSM proportion'], axis=1)
+    ward_counts.columns = [name + ' scaled number']
     
     return ward_counts
                 
