@@ -191,7 +191,42 @@ def get_osm_locations(tag_dict, bbox):
     
     return gdf_places
     
-
+def rescale_to_census(locations, wards, census_num, name:str):
+    """
+    Rescales numbers of a certain feature per ward, based on the official number for the 
+    study area.
+    
+    Parameters:
+    locations: GeoDataFrame of locations of a specific type in the area of interest
+    wards: GeoDataFrame of the ward boundaries in the AOI
+    census_num: official number of that specific type of amenity 
+    name: place type to append to column names in output dataframe
+    
+    Returns:
+    Dataframe with the scaled numbers, with the ward number as the index
+    """
+    #Perform spatial join to get the ward number for each commercial location:
+    places_with_wards = gpd.sjoin(locations, wards, how='left', predicate='within')
+    
+    # Count number of hotels and hospitals per ward
+    ward_counts = places_with_wards.groupby(["NEW_WARD_N", "type"]).size().unstack(fill_value=0)
+    
+    # Ensure all wards are included by merging with the full list of wards
+    all_wards = pd.DataFrame(wards[["NEW_WARD_N"]])
+    ward_counts = all_wards.merge(ward_counts, on="NEW_WARD_N", how="left").fillna(0)
+    #Rename columns for clarity:
+    ward_counts.columns = ['Ward', 'OSM count']
+    ward_counts = ward_counts.sort_values(by='Ward').set_index('Ward')
+    
+    #Get proportion from OSM in each ward:
+    ward_counts['OSM proportion'] = ward_counts['OSM count'] / ward_counts['OSM count'].sum()
+    
+    #Scale the proportions in each ward by the total number reported in the census:
+    ward_counts['scaled number'] = ward_counts['OSM proportion'] * census_num
+    
+    ward_counts.columns = [name + ' ' + header for header in ward_counts.columns]
+    
+    return ward_counts
                 
                 
                 
