@@ -513,6 +513,22 @@ class UrbDemData:
         #Set the location for output files:
         self.output_loc = os.path.join(current_dir, r'OutputData')
         
+        #Bring in the wards:
+        input_wards = gpd.read_file(os.path.join(input_data_loc, wards_data_file))
+        print(f'Wards file read. Its CRS is EPSG:{input_wards.crs.to_epsg()}')
+        if input_wards.crs.to_epsg() != 4326:
+            print(f'Reprojecting wards file to WGS84 GCS (EPSG:4326)...')
+            self.wards = input_wards.to_crs(epsg=4326)
+        else:
+            self.wards = input_wards
+        #Get useful info for later:
+        self.minx = self.wards.total_bounds[0]
+        self.miny = self.wards.total_bounds[1]
+        self.maxx = self.wards.total_bounds[2]
+        self.maxy = self.wards.total_bounds[3]
+        
+        
+        
         #Check that plumbing values are correct
         if perc_full_plumb < 0 or perc_full_plumb > 100:
             raise ValueError(f'perc_full_plumb must be an integer in range [0,100] but {perc_full_plumb} was provided.')
@@ -564,6 +580,16 @@ class UrbDemData:
         inst_data['Institutional demand [m3/d]'] = inst_data['Currently attending'] * self.demand_student
         inst_data = inst_data.drop(labels=['Currently attending'], axis='columns').set_index('Ward')
         demand_data = demand_data.merge(inst_data, how='outer', left_index=True, right_index=True)
+        
+        ####### Commercial demands: #######
+        #Define the types of feature we are interested in:
+        tags = {'tourism': 'hotel', 'amenity': 'hospital'}
+        #Get a geodataframe with their locations:
+        self.comm_locs = util.get_osm_locations(tags, (self.miny, self.minx, self.maxy, self.maxx))
+        
+        #Use util function to get a starting dataframe with the predicted number of hotels
+        #and hospitals per ward:
+        
         
         
         pass

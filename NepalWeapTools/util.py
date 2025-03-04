@@ -27,6 +27,9 @@ import rasterio
 from rasterio.io import MemoryFile
 from rasterio.mask import mask
 import geopandas as gpd
+from shapely.geometry import Point
+import overpy
+import json
 
 
 def date_standardiser(date_string):
@@ -144,7 +147,56 @@ def get_zonal_stats(in_raster, in_meta, gdf, class_dict:dict, key_field_name:str
     
     return raw_stats       
                 
-                
+def get_osm_locations(tag_dict, bbox):
+    """
+    Gets the locations/info for specified types of things in a specified bounding box
+    
+    Parameters:
+    tag_dict: a dictionary of node tag key: value elements like {'Tag key': 'tag value'}
+    bbox: a tuple of lat/lon coordinates (miny, minx, maxy, maxx) defining the search envelope
+    """
+    #Build a string of tag searches for the query:
+    searches = []
+    for key, value in tag_dict.items():
+        string = f'\n  node["{key}"="{value}"]{bbox};'
+        searches.append(string)
+    bracket_bit = '(' + ''.join(searches) + '\n);'
+    
+    #Put the query string together:
+    query = '[out:json];\n' + bracket_bit + '\nout body;'
+    #Initialise overpass api:
+    api = overpy.Overpass()
+    #Fetch OSM data:
+    result = api.query(query)
+    
+    # Store results in a structured format
+    places = []
+    for node in result.nodes:
+        #get the type dynamically based on the tag_dict provided
+        type_val = next(
+            (value for key, value in node.tags.items() if key in tag_dict.keys()),
+            'Unknown' #Default value
+        )
+        places.append({
+            "name": node.tags.get("name", "Unknown"),
+            "type": type_val,
+            "lat": float(node.lat),  # Convert Decimal to float
+            "lon": float(node.lon)   # Convert Decimal to float
+        })
+
+    # Convert data to GeoDataFrame
+    gdf_places = gpd.GeoDataFrame(
+        places, geometry=[Point(p["lon"], p["lat"]) for p in places], crs="EPSG:4326"
+    )
+    
+    return gdf_places
+    
+def rescale_to_wards():
+    """
+    Produces a dataframe with assumed numbers of the amenity type per ward.
+    """
+    
+    pass
                 
                 
                 
