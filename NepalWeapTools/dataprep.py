@@ -593,20 +593,24 @@ class UrbDemData:
         )
         
         #Get dataframes with their total census numbers, distributed according to their OSM distribution:
-        scaled_hotel = util.rescale_to_census(
-            self.hotel_locs,
-            self.wards,
-            self.num_hotels,
-            'Hotel'
+        frames = {
+            'Hotel': (self.hotel_locs, self.num_hotels),
+            'Hospital': (self.hospital_locs, self.num_hospitals)
+        }
+        
+        #Get a dataframe with just the census-scaled numbers for ach ward:
+        ward_scaled_nums = pd.DataFrame(
+            self.wards[["NEW_WARD_N"]].rename(
+                {"NEW_WARD_N": 'Ward'},
+                axis=1
+            ).sort_values(by='Ward').set_index('Ward')
         )
-        print(scaled_hotel)
-        scaled_hospital = util.rescale_to_census(
-            self.hospital_locs,
-            self.wards,
-            self.num_hospitals,
-            'Hospital'
-        )
-        print(scaled_hospital)
+        for key, value in frames.items():
+            this_df = util.rescale_to_census(value[0], self.wards, value[1], key)
+            ward_scaled_nums = ward_scaled_nums.merge(this_df, left_index=True, right_index=True, how='left')
+            
+        print(ward_scaled_nums)
+        
         
         pass
         
