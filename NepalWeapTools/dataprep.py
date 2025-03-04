@@ -44,7 +44,7 @@ def main():
 if __name__ == '__main__':
     main()
 
-####### Measured variables: #################################################
+####### Measured variables: ###################################################
 
 class MeasVar:
     """
@@ -114,7 +114,7 @@ class MeasVar:
         )
         return output_string
 
-####### Hydro data: ########################################################
+####### Hydro data: ###########################################################
 
 class HydroData:
     """
@@ -212,7 +212,7 @@ class HydroData:
         """Define what shows when an instance is printed or shown as a string"""
         return f'Hydro data with {len(self.datasets)} measurements .'
 
-####### Meteo data: ########################################################
+####### Meteo data: ###########################################################
 
 class MeteoData:
     """
@@ -297,7 +297,7 @@ class MeteoData:
             """
             return f'Meteo data with {len(self.datasets)} measurements .'
 
-####### LULC data: ########################################################
+####### LULC data: ############################################################
 
 class LulcData:
     """
@@ -456,7 +456,7 @@ class LulcData:
         """Define what to show when instance is presented as a string"""
         return f'Land Use/Land Cover data for {self.input_vector_file_name.split('_')[0]}.'
 
-####### Urban Demand data: ########################################################
+####### Urban Demand data: ####################################################
 
 class UrbDemData:
     """
@@ -482,6 +482,8 @@ class UrbDemData:
         demand_hospital_bed:float=0.5,
         demand_other_comm:float=0.01,
         other_comm_denom=3,
+        munic_dem_propn:float=0.075,
+        indust_dem_propn:float=0.225,
         census_year:int=2021
         ):
         """
@@ -508,6 +510,10 @@ class UrbDemData:
         demand_other_comm: assumed daily water demand per commercial population, in cubic metres (m3/d)
         other_comm_denom: denominator of the fraction of the population assumed to be commercial i.e. 3
             means one third of the population.
+        munic_dem_propn: The amount of municipal demand, relative to the 
+            sum of domestic, institutional, and commercial.
+        indust_dem_propn: The amount of industrial demand, relative to
+            the sum of domestic, institutional, and commercial.
         census_year: year the census we are using data for was conducted
         
         Notes:
@@ -558,9 +564,11 @@ class UrbDemData:
         self.demand_hospital_bed = demand_hospital_bed
         self.demand_other_comm = demand_other_comm
         self.other_comm_denom = other_comm_denom
+        self.munic_dem_propn = munic_dem_propn
+        self.indust_dem_propn = indust_dem_propn
         self.census_year = census_year
         
-        ####### Domestic demands: #######
+        ####### Domestic demands: #############################################
         #Read in the excel file:
         pop_data = pd.read_excel(os.path.join(input_data_loc, pop_data_file))
         pop_data = pop_data[['Ward', 'Total population', 'Number of households', 'Average household size']]
@@ -586,7 +594,7 @@ class UrbDemData:
             axis='columns'
         ).set_index('Ward')
         
-        ####### Institutional demands (educational): #######
+        ####### Institutional demands (educational): ##########################
         #Read in the excel file:
         inst_data = pd.read_excel(os.path.join(input_data_loc, student_data_file))
         #Calculate the demand column:
@@ -594,7 +602,7 @@ class UrbDemData:
         inst_data = inst_data.drop(labels=['Currently attending'], axis='columns').set_index('Ward')
         demand_data = demand_data.merge(inst_data, how='outer', left_index=True, right_index=True)
         
-        ####### Commercial demands: #######
+        ####### Commercial demands: ###########################################
         #get a bounding box in the format expected by util.get_osm_locations():
         lat_long_bbox = (self.miny, self.minx, self.maxy, self.maxx)
         #Store relevant values as a dictionary:
@@ -662,9 +670,23 @@ class UrbDemData:
             'Other demand'], 
             axis=1
         )
-        print(demand_data)
         
-        pass
+        ####### Municipal demand: #############################################
+        demand_data['Municipal demand [m3/d]'] = (
+            demand_data['Domestic demand [m3/d]'] + 
+            demand_data['Institutional demand [m3/d]'] + 
+            demand_data['Commercial demand [m3/d]']
+        ) * self.munic_dem_propn
+        
+        ####### Industrial demand: ############################################
+        demand_data['Industrial demand [m3/d]'] = (
+            demand_data['Domestic demand [m3/d]'] + 
+            demand_data['Institutional demand [m3/d]'] + 
+            demand_data['Commercial demand [m3/d]']
+        ) * self.indust_dem_propn
+        
+        #Load demand table into class instance:
+        self.total_demands = demand_data
         
     def __str__(self):
         """Define what to show when instance is presented as a string"""
