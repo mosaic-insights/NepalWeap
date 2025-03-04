@@ -191,12 +191,7 @@ def get_osm_locations(tag_dict, bbox):
     
     return gdf_places
     
-def rescale_to_wards():
-    """
-    Produces a dataframe with assumed numbers of the amenity type per ward.
-    """
-    
-    pass
+
                 
                 
                 

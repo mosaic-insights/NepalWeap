@@ -587,9 +587,29 @@ class UrbDemData:
         #Get a geodataframe with their locations:
         self.comm_locs = util.get_osm_locations(tags, (self.miny, self.minx, self.maxy, self.maxx))
         
-        #Use util function to get a starting dataframe with the predicted number of hotels
-        #and hospitals per ward:
+        #------ TODO: wrap the following code in a more dynamic function: ------------------------
+        #Perform spatial join to get the ward number for each commercial location:
+        places_with_wards = gpd.sjoin(self.comm_locs, self.wards, how='left', predicate='within')
         
+        # Count number of hotels and hospitals per ward
+        ward_counts = places_with_wards.groupby(["NEW_WARD_N", "type"]).size().unstack(fill_value=0)
+        ward_counts = ward_counts[tags.values()]
+        
+        # Ensure all wards are included by merging with the full list of wards
+        all_wards = pd.DataFrame(self.wards[["NEW_WARD_N"]])
+        ward_counts = all_wards.merge(ward_counts, on="NEW_WARD_N", how="left").fillna(0)
+        #Rename columns for clarity:
+        ward_counts.columns = ['Ward', 'num_hotels_osm', 'num_hospitals_osm']
+        ward_counts = ward_counts.sort_values(by='Ward').set_index('Ward')
+        
+        #Get proportion of hotels and hospitals from OSM in each ward:
+        ward_counts['propn_osm_hotels'] = ward_counts['num_hotels_osm'] / ward_counts['num_hotels_osm'].sum()
+        ward_counts['propn_osm_hospitals'] = ward_counts['num_hospitals_osm'] / ward_counts['num_hospitals_osm'].sum()
+        
+        #Scale the proportions in each ward by the total number reported in the census:
+        ward_counts['scaled_num_hotels'] = ward_counts['propn_osm_hotels'] * self.num_hotels
+        ward_counts['scaled_num_hospitals'] = ward_counts['propn_osm_hospitals'] * self.num_hospitals
+        #--------------------------------------------------------------------------------------
         
         
         pass
