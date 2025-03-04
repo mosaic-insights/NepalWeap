@@ -582,33 +582,33 @@ class UrbDemData:
         demand_data = demand_data.merge(inst_data, how='outer', left_index=True, right_index=True)
         
         ####### Commercial demands: #######
-        #Get a geodataframe with their locations:
-        self.hotel_locs = util.get_osm_locations(
-            {'tourism': 'hotel'},
-            (self.miny, self.minx, self.maxy, self.maxx)
-        )
-        self.hospital_locs = util.get_osm_locations(
-            {'amenity': 'hospital'},
-            (self.miny, self.minx, self.maxy, self.maxx)
-        )
-        
-        #Get dataframes with their total census numbers, distributed according to their OSM distribution:
+        #get a bounding box in the format expected by util.get_osm_locations():
+        lat_long_bbox = (self.miny, self.minx, self.maxy, self.maxx)
+        #Store relevant values as a dictionary:
         frames = {
-            'Hotel': (self.hotel_locs, self.num_hotels),
-            'Hospital': (self.hospital_locs, self.num_hospitals)
+            'Hotel': {
+                'tag': {'tourism': 'hotel'},
+                'num': self.num_hotels
+            },
+            'Hospital': {
+                'tag': {'amenity': 'hospital'},
+                'num': self.num_hospitals
+            }
         }
         
-        #Get a dataframe with just the census-scaled numbers for ach ward:
+        #Get a dataframe with just the census-scaled numbers for each ward:
         ward_scaled_nums = pd.DataFrame(
             self.wards[["NEW_WARD_N"]].rename(
                 {"NEW_WARD_N": 'Ward'},
                 axis=1
             ).sort_values(by='Ward').set_index('Ward')
         )
+        #Populate the scaled values for each feature type:
         for key, value in frames.items():
-            this_df = util.rescale_to_census(value[0], self.wards, value[1], key)
+            these_locs = util.get_osm_locations(value['tag'], lat_long_bbox)
+            this_df = util.rescale_to_census(these_locs, self.wards, value['num'], key)
             ward_scaled_nums = ward_scaled_nums.merge(this_df, left_index=True, right_index=True, how='left')
-            
+        
         print(ward_scaled_nums)
         
         
