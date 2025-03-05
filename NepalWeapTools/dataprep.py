@@ -704,9 +704,20 @@ class UrbDemData:
             )
         self.ward_demand = temp_wards
         
-        example_utility = gpd.read_file(os.path.join(input_data_loc, 'LWSUC.shp'))
-        utility_demand = util.areal_interp(self.ward_demand, example_utility)
-        print(utility_demand['SA ' + 'Total demand [m3/d]'])
+        ####### Demand by utility area: #######################################
+        #Get the estimated demand by utility area and join them into 
+        #one geodataframe
+        temp_utilities = gpd.GeoDataFrame()
+        for utility_file in utility_data_files:
+            this_utility = gpd.read_file(os.path.join(input_data_loc, utility_file))
+            utility_demand = util.areal_interp(self.ward_demand, this_utility)
+            utility_demand['Utility'] = utility_file.split('.')[0]
+            temp_utilities = pd.concat([temp_utilities, utility_demand])
+        #Assign the CRS and store in class instance:
+        temp_utilities.set_crs(epsg=self.ward_demand.crs.to_epsg())
+        self.utility_demand = temp_utilities
+        
+            
         
         
     def __str__(self):
