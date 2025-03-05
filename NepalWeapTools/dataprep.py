@@ -44,7 +44,9 @@ def main():
 if __name__ == '__main__':
     main()
 
+#------------------------------------------------------------------------------
 ####### Measured variables: ###################################################
+#------------------------------------------------------------------------------
 
 class MeasVar:
     """
@@ -145,7 +147,9 @@ class MeasVar:
                 )
         return output_string
 
+#------------------------------------------------------------------------------
 ####### Hydro data: ###########################################################
+#------------------------------------------------------------------------------
 
 class HydroData:
     """
@@ -273,7 +277,9 @@ class HydroData:
         """Define what shows when an instance is shown as a string"""
         return f'Hydro data with {len(self.datasets)} measurements .'
 
+#------------------------------------------------------------------------------
 ####### Meteo data: ###########################################################
+#------------------------------------------------------------------------------
 
 class MeteoData:
     """
@@ -296,20 +302,31 @@ class MeteoData:
             ]
         ):
         """
+        Read input meteorological data file and store with instance as
+        dataframe
         
         Parameters:
-        file_name: filename.ext string for Excel spreadsheet with meteorological data
-        station_list: list of strings representing station names. Must match column names in worksheets
-        model_cal_start: start date of the desired calibration time period
-        model_cal_end: end date of the desired calibration time period
-        measurements: list of meteorological variables to include. Must match worksheet names in spreadsheet
+        - file_name: filename.ext string for Excel spreadsheet with 
+        meteorological data
+        - station_list: list of strings representing station names.
+        Must match column names in worksheets
+        - model_cal_start: start date of the desired calibration time
+        period
+        - model_cal_end: end date of the desired calibration time
+        period
+        - measurements: list of meteorological variables to include.
+        Must match worksheet names in spreadsheet
         
+        ----------------------------------------------------------------
         Notes:
-        - Climate data are stored in one excel file, with a worksheet for each variable.
+        - Climate data are stored in one excel file, with a worksheet
+        for each variable.
         - Each worksheet has a column for each weather station
-        - Start and end dates must be in a valid ISO8601 format as per datetime.datetime.fromisoformat()
+        - Start and end dates must be in a valid ISO8601 format as per
+        datetime.datetime.fromisoformat()
+        ----------------------------------------------------------------
         """
-        
+        ####### Method start ##################################################
         #Store the basic info in this instance
         self.input_file_name = file_name.split('.')[0]
         self.stations = station_list
@@ -321,7 +338,9 @@ class MeteoData:
         self.date_range = [date.strftime('%Y-%m-%d') for date in date_array]
         
         #Get the directory relative to the current script (dataprep.py)
-        current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        current_dir = os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__))
+            )
         #Construct the path to the InputData folder
         input_data_path = os.path.join(current_dir, r'InputData\Meteo')
         #Add the file name to the path:
@@ -331,13 +350,21 @@ class MeteoData:
         
         #Load the excel file and work out what variables are included
         self.input_file = pd.ExcelFile(self.data_path)
-        checked_measures = util.compare_sheet_names(self.input_file.sheet_names, measurements)
+        checked_measures = util.compare_sheet_names(
+            self.input_file.sheet_names,
+            measurements
+            )
         
+        ####### Loading data by variable: #####################################
         self.datasets = []
         #Create a MeasVar instance for each of the desired measurements:
         for variable in checked_measures:
             #Get the worksheet corresponding to the current variable
-            this_df = pd.read_excel(self.data_path, variable, parse_dates=['Date'])
+            this_df = pd.read_excel(
+                self.data_path,
+                variable,
+                parse_dates=['Date']
+                )
             og_length = this_df.shape[0]
             
             #Standardise the date column and set it as the index:
@@ -349,7 +376,8 @@ class MeteoData:
             
             #Only get columns matching stations in our desired list:
             this_df = this_df.loc[:, this_df.columns.isin(self.stations)]
-            #Create a linked MeasVar instance to store it as a formatted dataset:
+            #Create a linked MeasVar instance to store it as a formatted
+            #dataset:
             dataset = MeasVar(
                 this_df,
                 variable,
@@ -362,11 +390,13 @@ class MeteoData:
         
         def __str__(self):
             """
-            Placeholder string function
+            Define what shows when an instance is shown as a string
             """
             return f'Meteo data with {len(self.datasets)} measurements .'
 
+#------------------------------------------------------------------------------
 ####### LULC data: ############################################################
+#------------------------------------------------------------------------------
 
 class LulcData:
     """
