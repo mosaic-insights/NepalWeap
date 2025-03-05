@@ -229,7 +229,75 @@ def rescale_to_census(locations, wards, census_num, name:str):
     return ward_counts
                 
                 
-                
+def areal_interp(
+    wards,
+    service_area, 
+    eq_ar_proj=6931,
+    demand_cols=[
+        'Domestic demand [m3/d]',
+        'Institutional demand [m3/d]',
+        'Commercial demand [m3/d]',
+        'Municipal demand [m3/d]',
+        'Industrial demand [m3/d]',
+        'Total demand [m3/d]'
+        ]
+    ):
+    """
+    Estimate total water demand for a service area based on its consituent
+    wards.
+    
+    Parameters:
+    wards: geodataframe of ward boundary polgons with attributes for demand
+    service_area: geodataframe of a single service area polygon
+    eq_ar_proj: epsg code for the desired equal-area proejction to use
+    demand_cols: list of column names in the wards file
+    
+    Returns:
+    Geodataframe of the service area polygon with the estimated total demand
+    
+    Notes:
+    - This is a crude areal interpolator which assumes uniform demand across
+    the wards
+    """
+    #Get and store the input CRS:
+    input_crs = wards.crs.to_epsg()
+    #Reproject both to EPSG:6931, which is an equal-area projection:
+    ea_wards = wards.to_crs(epsg=eq_ar_proj)
+    ea_utility = service_area.to_crs(epsg=eq_ar_proj)
+    
+    #Second, calculate the area of each ward in the reprojected layer:
+    ea_wards['OG_area'] = ea_wards.geometry.area
+    
+    #Get the intersection of the wards layer with the utility layer:
+    wards_in_utility = ea_wards.overlay(ea_utility)
+        
+    #Calculate the area of each ward in the clipped layer again:
+    wards_in_utility['New_area'] = wards_in_utility.geometry.area
+        
+    #Calculate the proportion of the original area in the clipped layer:
+    wards_in_utility['Area_propn'] = (
+        wards_in_utility['New_area'] / wards_in_utility['OG_area']
+        )
+    
+    new_cols = []
+    #Apply that proportion to the demand for each ward
+    for column in demand_cols:
+        new_col = 'SA ' + column
+        new_cols.append(new_col)
+        wards_in_utility[new_col] = (
+            wards_in_utility[column] * wards_in_utility['Area_propn']
+            )
+    
+    #Calculate the sum of all rescaled ward demands in the clipped layer
+    #and make them attribbutes of the utility layer:
+    for column in new_cols:
+        this_demand_total = wards_in_utility[column].sum()
+        ea_utility[column] = this_demand_total
+    
+    #Return a geodataframe of just the utility boundary and the demands:
+    ea_utility = ea_utility[new_cols + ['geometry']]
+    return ea_utility.to_crs(epsg=input_crs)
+    
                 
                 
                 

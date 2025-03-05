@@ -704,6 +704,10 @@ class UrbDemData:
             )
         self.ward_demand = temp_wards
         
+        example_utility = gpd.read_file(os.path.join(input_data_loc, 'LWSUC.shp'))
+        utility_demand = util.areal_interp(self.ward_demand, example_utility)
+        print(utility_demand['SA ' + 'Total demand [m3/d]'])
+        
         
     def __str__(self):
         """Define what to show when instance is presented as a string"""
