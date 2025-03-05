@@ -21,7 +21,7 @@ that are readable by the Stockholm Environment Institute's Water
 Evaluation And Planning (WEAP) software.
 ------------------------------------------------------------------------
 """
-####### Module Imports: #######
+####### Module Imports: #######################################################
 from . import util
 import numpy as np
 import pandas as pd
@@ -31,7 +31,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import rasterio as rio
 
-####### For when module is run directly: #######
+####### For when module is run directly: ######################################
 def main():
     """
     Placeholder function for if this package is run directly.
@@ -48,8 +48,12 @@ if __name__ == '__main__':
 
 class MeasVar:
     """
-    Store data for individual variables that area measured, such as streamflow or temperature.
-    Allows broad classes to be extended to incorporate variables that are not currently included.
+    --------------------------------------------------------------------
+    Store data for individual variables that area measured, such as 
+    streamflow or temperature.
+    Allows broad classes to be extended to incorporate variables that 
+    are not currently included.
+    --------------------------------------------------------------------
     """
     
     def __init__(self,
@@ -61,17 +65,24 @@ class MeasVar:
         skipped_rows:int=0
         ):
         """
-        Read and store a dataframe passed from a HydroData or MeteoData instance.
+        Read and store a dataframe passed from a HydroData or MeteoData
+        instance.
         
         Parameters:
-        dataframe: a pandas dataframe with a row for each date and column for each station.
-        date_range: a list of observation dates to include
-        parent: the instance of HydroData or MeteoData which created this instance
-        unit: if a unit is specified or known, this will be incorporated into the output
-            column name.
-        skipped_rows: for audit trail purposes; the number of rows with date values that 
-            couldn't be handled by the source instance.
+        - dataframe: a pandas dataframe with a row for each date and 
+        column for each station.
+        - date_range: a list of observation dates to include
+        - parent: the instance of HydroData or MeteoData which created
+        this instance
+        - unit: if a unit is specified or known, this will be
+        incorporated into the output column name.
+        - skipped_rows: for audit trail purposes; the number of rows
+        with date values that couldn't be handled by the source 
+        instance.
+        ----------------------------------------------------------------
+        ----------------------------------------------------------------
         """
+        ####### Method start ##################################################
         self.measure = measure
         self.date_range = date_range
         self.unit = unit
@@ -80,17 +91,28 @@ class MeasVar:
         
         #Load an empty dataframe with dates as the index:
         self.base_data = pd.DataFrame(index=self.date_range)
-        self.base_data = self.base_data.merge(dataframe, left_index=True, right_index=True, how='left')
+        self.base_data = self.base_data.merge(
+            dataframe,
+            left_index=True,
+            right_index=True,
+            how='left'
+            )
         
     def to_weap_data(self):
         """
-        Reformat the base_data to match WEAP's required CSV format, and write it as a file to the instance's
-        output location.
+        Reformat the base_data to match WEAP's required CSV format, and
+        write it as a file to the instance's output location.
+        ----------------------------------------------------------------
+        ----------------------------------------------------------------
         """
-        #Get an updated copy of the base_data with the date moved out of the index, leaving the original untouched:
+        ####### Method start ##################################################
+        #Get an updated copy of the base_data with the date moved out of
+        #the index, leaving the original untouched:
         w_data = self.base_data.reset_index(names='$Columns = Date')
         if self.unit != 'Unspecified':
-            w_data.columns = [col + f' [{self.unit}]' for col in w_data.columns]
+            w_data.columns = (
+                [col + f' [{self.unit}]' for col in w_data.columns]
+                )
             
         num_blanks  = [ '' for i in range(len(w_data.columns) - 1)]
         #Add lines to match required formatting of WEAP files:
@@ -103,24 +125,37 @@ class MeasVar:
         )
         
         #Write to csv in the output folder:
-        w_data.to_csv(rf'{self.parent.output_loc}\{self.parent.input_file_name}_{self.measure}.csv', index=False)
+        out_file_path = (
+            rf'{self.parent.output_loc}\{self.parent.input_file_name}'
+            rf'_{self.measure}.csv'
+            )
+        w_data.to_csv(out_file_path, index=False)
         
         return True
         
     def __str__(self):
         """Define how to represent this as a string"""
-        output_string = 'Set of {} recordings between {} and {}, for {} stations.'.format(
-            self.measure, self.date_range[0], self.date_range[-1], len(self.base_data.columns)
-        )
+        output_string = (
+            'Set of {} recordings between {} and {}, for {} stations.'
+            ).format(
+                self.measure,
+                self.date_range[0],
+                self.date_range[-1],
+                len(self.base_data.columns)
+                )
         return output_string
 
 ####### Hydro data: ###########################################################
 
 class HydroData:
     """
-    Loads and stores hydrological data, and allows it to be exported to WEAP formats.
-    Currently only streamflow is measured, but this class uses the MeasVar class in this module 
-    to handle separate variables, so is extensible to additional hydro variables.
+    --------------------------------------------------------------------
+    Loads and stores hydrological data, and allows it to be exported to
+    WEAP formats.
+    Currently only streamflow is measured, but this class uses the
+    MeasVar class in this module to handle separate variables, so is 
+    extensible to additional hydro variables.
+    --------------------------------------------------------------------
     """
     
     def __init__(self, file_name:str,
@@ -131,26 +166,38 @@ class HydroData:
         units:list=['m3/s']
         ):
         """
-        Read input streamflow data file and store with instance as dataframe
+        Read input streamflow data file and store with instance as
+        dataframe
         
         Parameters:
-        file_name: path to file with raw stream gauge data
-        station_list: list of names of streamflow gauge stations to be examined. Must match worksheet names
-        model_cal_start: start date of the desired calibration time preiod in format YYYY-MM-DD
-        model_cal_end: end date of the desired calibration time preiod in format YYYY-MM-DD
-        measurements: list of hydrological variables to include
-        units: list of strings representing units of the corresponding entries in measurements
+        - file_name: path to file with raw stream gauge data
+        - station_list: list of names of streamflow gauge stations to be
+        examined. Must match worksheet names
+        - model_cal_start: start date of the desired calibration time
+        period in format YYYY-MM-DD
+        - model_cal_end: end date of the desired calibration time period
+        in format YYYY-MM-DD
+        - measurements: list of hydrological variables to include
+        - units: list of strings representing units of the corresponding
+        entries in measurements
         
+        ----------------------------------------------------------------
         Notes:
-        - file_name will be deprecated once data is stored in a static path relative to the module.
+        - file_name will be deprecated once data is stored in a static 
+        path relative to the module.
         - User will then just input the station list.
-        - Dates must be in a valid ISO8601 format as per datetime.date.fromisoformat()
-        - Names of stations in the station list must exactly match the worksheet names
+        - Dates must be in a valid ISO8601 format as per 
+        datetime.date.fromisoformat()
+        - Names of stations in the station list must exactly match the
+        worksheet names
         - This code assumes there is only one variable per worksheet
+        ----------------------------------------------------------------
         """
-        
+        ####### Method start ##################################################
         #Get the directory relative to the current script (dataprep.py)
-        current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        current_dir = os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__))
+            )
         #Construct the path to the InputData folder
         input_data_path = os.path.join(current_dir, r'InputData\Hydro')
         #Add the file name to the path:
@@ -171,8 +218,12 @@ class HydroData:
         
         #Load the excel file and work out what variables are included
         self.input_file = pd.ExcelFile(self.data_path)
-        checked_stations = util.compare_sheet_names(self.input_file.sheet_names, self.stations)
+        checked_stations = util.compare_sheet_names(
+            self.input_file.sheet_names,
+            self.stations
+            )
         
+        ####### Loading data by variable: #####################################
         self.datasets = []
         #Create a dummy df to merge the values for each station into:            
         base_var_df = pd.DataFrame(index=self.date_range)
@@ -184,7 +235,11 @@ class HydroData:
             #Go through each station in the station list and load the data:
             for station in station_list:
                 #Read in the excel file:
-                this_df = pd.read_excel(self.data_path, station, parse_dates=['Date'])
+                this_df = pd.read_excel(
+                    self.data_path,
+                    station,
+                    parse_dates=['Date']
+                    )
                 #Standardise the date:
                 og_length = this_df.shape[0]
                 this_df['Date'] = this_df['Date'].apply(util.date_standardiser)
@@ -193,9 +248,15 @@ class HydroData:
                 skipped_rows += (og_length - new_length)
                 this_df.set_index('Date', inplace=True)
                 this_df.columns=[station]
-                base_var_df = base_var_df.merge(this_df, left_index=True, right_index=True, how='left')
+                base_var_df = base_var_df.merge(
+                    this_df,
+                    left_index=True,
+                    right_index=True,
+                    how='left'
+                    )
             
-            #Create a linked MeasVar instance to store it as a formatted dataset:
+            #Create a linked MeasVar instance to store it as a formatted
+            #dataset:
             dataset = MeasVar(
                 base_var_df,
                 variable,
@@ -209,22 +270,30 @@ class HydroData:
             current_index += 1
         
     def __str__(self):
-        """Define what shows when an instance is printed or shown as a string"""
+        """Define what shows when an instance is shown as a string"""
         return f'Hydro data with {len(self.datasets)} measurements .'
 
 ####### Meteo data: ###########################################################
 
 class MeteoData:
     """
-    Loads and stores meteorological data, and allows it to be exported to WEAP formats.
+    --------------------------------------------------------------------
+    Loads and stores meteorological data, and allows it to be exported
+    to WEAP formats.
     Uses the MeasVar class in this module to handle separate variables.
+    --------------------------------------------------------------------
     """
     
     def __init__(self, file_name:str,
         station_list:list,
         model_cal_start:str,
         model_cal_end:str,
-        measurements:list=['Precip', 'Temp_max', 'Temp_min', 'Relative humidity']
+        measurements:list=[
+            'Precip',
+            'Temp_max',
+            'Temp_min',
+            'Relative humidity'
+            ]
         ):
         """
         
