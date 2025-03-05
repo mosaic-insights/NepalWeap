@@ -39,12 +39,15 @@ def date_standardiser(date_string):
         date_object = dt.datetime.fromisoformat(str(date_string)).date() 
     except ValueError:
         try:
-            date_object = dt.datetime.strptime(date_string, '%d/%b/%Y').date()
+            date_object = dt.datetime.strptime(date_string, '%d/%m/%Y').date()
         except ValueError:
             try:
-                date_object = dt.datetime.strptime(date_string, '%m/%d/%Y').date()
+                date_object = dt.datetime.strptime(date_string, '%d/%b/%Y').date()
             except ValueError:
-                return None
+                try:
+                    date_object = dt.datetime.strptime(date_string, '%m/%d/%Y').date()
+                except ValueError:
+                    return None
     # If successful, format the date_object to 'YYYY-MM-DD' and return it
     return date_object.strftime('%Y-%m-%d')
 
@@ -269,7 +272,7 @@ def areal_interp(
     ea_wards['OG_area'] = ea_wards.geometry.area
     
     #Get the intersection of the wards layer with the utility layer:
-    wards_in_utility = ea_wards.overlay(ea_utility)
+    wards_in_utility = ea_wards.overlay(ea_utility, keep_geom_type=True)
         
     #Calculate the area of each ward in the clipped layer again:
     wards_in_utility['New_area'] = wards_in_utility.geometry.area
@@ -296,6 +299,7 @@ def areal_interp(
     
     #Return a geodataframe of just the utility boundary and the demands:
     ea_utility = ea_utility[new_cols + ['geometry']]
+    ea_utility.columns = [a.replace('SA ', '') for a in ea_utility.columns]
     return ea_utility.to_crs(epsg=input_crs)
     
                 
