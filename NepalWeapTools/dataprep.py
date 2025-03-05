@@ -50,11 +50,11 @@ if __name__ == '__main__':
 
 class MeasVar:
     """
-    --------------------------------------------------------------------
     Store data for individual variables that area measured, such as 
     streamflow or temperature.
     Allows broad classes to be extended to incorporate variables that 
     are not currently included.
+    --------------------------------------------------------------------
     --------------------------------------------------------------------
     """
     
@@ -153,12 +153,12 @@ class MeasVar:
 
 class HydroData:
     """
-    --------------------------------------------------------------------
     Loads and stores hydrological data, and allows it to be exported to
     WEAP formats.
     Currently only streamflow is measured, but this class uses the
     MeasVar class in this module to handle separate variables, so is 
     extensible to additional hydro variables.
+    --------------------------------------------------------------------
     --------------------------------------------------------------------
     """
     
@@ -283,10 +283,10 @@ class HydroData:
 
 class MeteoData:
     """
-    --------------------------------------------------------------------
     Loads and stores meteorological data, and allows it to be exported
     to WEAP formats.
     Uses the MeasVar class in this module to handle separate variables.
+    --------------------------------------------------------------------
     --------------------------------------------------------------------
     """
     
@@ -400,35 +400,55 @@ class MeteoData:
 
 class LulcData:
     """
-    Loads and stores land use/land cover data, and allows it to be exported to WEAP formats.
+    Loads and stores land use/land cover data, and allows it to be 
+    exported to WEAP formats.
+    --------------------------------------------------------------------
+    --------------------------------------------------------------------
     """
     
-    def __init__(self, raster_file_name:str, vector_file_name:str, raster_res=30):
+    def __init__(
+        self,
+        raster_file_name:str,
+        vector_file_name:str,
+        raster_res=30
+        ):
         """
-        Load summary statistics for Land Use / Land Cover data by subcatchment
+        Load summary statistics for Land Use / Land Cover data by
+        subcatchment
         
         Parameters:
-        raster_file_name: filename.ext for a raster with values for LULC ICIMOD land use classification
-        vector_file_name: filename.ext for a shapefile of subcatchment areas
-        raster_res: spatial resolution (pixel size) of the input raster, in metres
-        
+        - raster_file_name: filename.ext for a raster with values for
+        LULC ICIMOD land use classification
+        - vector_file_name: filename.ext for a shapefile of subcatchment
+        areas
+        - raster_res: spatial resolution (pixel size) of the input
+        raster, in metres
+        ----------------------------------------------------------------
         Notes:
-        - LULC raster MUST be an integer raster which corresponds to standard ICIMOD classifications
-        
+        - LULC raster MUST be an integer raster which corresponds to
+        standard ICIMOD classifications
+        ----------------------------------------------------------------
         """
+        ####### Method start ##################################################
         #Get names of the input files:
         self.input_raster_file_name = raster_file_name.split('.')[0]
         self.input_vector_file_name = vector_file_name.split('.')[0]
         #Get the directory relative to the current script (dataprep.py)
-        current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        current_dir = os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__))
+            )
         
         #Construct the paths to the InputData folders
         input_raster_path = os.path.join(current_dir, r'InputData\LandUse')
         input_vector_path = os.path.join(current_dir, r'InputData\Catchments')
         
         #Add the file names to the paths:
-        self.raster_data_path = os.path.join(input_raster_path, raster_file_name)
-        self.vector_data_path = os.path.join(input_vector_path, vector_file_name)
+        self.raster_data_path = os.path.join(
+            input_raster_path, raster_file_name
+            )
+        self.vector_data_path = os.path.join(
+            input_vector_path, vector_file_name
+            )
         
         #Same for output location:
         self.output_loc = os.path.join(current_dir, r'OutputData')
@@ -454,16 +474,31 @@ class LulcData:
         self.pixel_area = self.pixel_res ** 2
         self.pixel_area_ha = self.pixel_area / 10000
         
-        #Get key components of the raster file and store them in the class instance:
-        self.raster_info, self.raster_values, self.raster_meta = util.get_raster_deets(self.raster_data_path)
-        print(f'Land use raster read. Its CRS is EPSG:{self.raster_info['crs']}')
+        ####### Processing: ###################################################
+        #Get key components of the raster file and store them in the class
+        #instance:
+        self.raster_info, self.raster_values, self.raster_meta = (
+            util.get_raster_deets(self.raster_data_path)
+            )
+        print(
+            f'Land use raster read. Its CRS is EPSG:{self.raster_info['crs']}'
+            )
         
         #Check that the shapefile is in the same CRS as the raster:
         input_shape = gpd.read_file(self.vector_data_path)
-        print(f'Subcatchments shape file read. Its CRS is EPSG:{input_shape.crs.to_epsg()}')
+        print(
+            'Subcatchments shape file read. Its CRS is'
+            f'EPSG:{input_shape.crs.to_epsg()}'
+            )
+        #If not, reproject it:
         if input_shape.crs.to_epsg() != self.raster_info['crs']:
-            print(f'Reprojecting subcatchments file to {self.raster_info['crs']}...')
-            self.subcatchments = input_shape.to_crs(epsg=self.raster_info['crs'])
+            print(
+                'Reprojecting subcatchments file to '
+                f'{self.raster_info['crs']}...'
+                )
+            self.subcatchments = input_shape.to_crs(
+                epsg=self.raster_info['crs']
+                )
         else:
             self.subcatchments = input_shape
         
@@ -477,18 +512,23 @@ class LulcData:
         
     def to_weap_data(self, start_year:int=2000, end_year:int=2021):
         """
-        Reformat the base_data to match WEAP's required CSV format, and write it as a file to the instance's
-        output location.
+        Reformat the base_data to match WEAP's required CSV format, and
+        write it as a file to the instance's output location.
         
         Parameters:
-        start_year: first year in the desired modelling timeframe
-        end_year: last year in the desired modelling timeframe.
+        - start_year: first year in the desired modelling timeframe
+        - end_year: last year in the desired modelling timeframe.
         
+        ----------------------------------------------------------------
         Notes:
-        - Will create a CSV for each subcatchment in this LulcData instance's subcatchment
-        - Output files have a row for each year, but the data is the same for each row. This is not intended
-        to actually model land use classifications at a particular point in time.
+        - Will create a CSV for each subcatchment in this LulcData
+        instance's subcatchment
+        - Output files have a row for each year, but the data is the
+        same for each row. This is not intended to actually model land
+        use classifications at a particular point in time.
+        ----------------------------------------------------------------
         """
+        ####### Method start ##################################################
         name_header = 'Subcatchment Name'
         out_stats_all = self.raw_stats.reset_index(names=name_header)
         #Convert pixel counts to areas in Ha:
@@ -496,9 +536,19 @@ class LulcData:
             out_stats_all[col] = out_stats_all[col] * self.pixel_area_ha
         
         #Combine columns to get the ones WEAP is expecting:
-        out_stats_all['Dense forest'] = out_stats_all['Forest'] + out_stats_all['Other wooded land']
-        out_stats_all['Updated grassland'] = out_stats_all['Grassland'] + out_stats_all['Bare soil'] + out_stats_all['Bare rock']
-        out_stats_all['Water'] = out_stats_all['Waterbody'] + out_stats_all['Riverbed']
+        out_stats_all['Dense forest'] = (
+            out_stats_all['Forest'] +
+            out_stats_all['Other wooded land']
+            )
+        out_stats_all['Updated grassland'] = (
+            out_stats_all['Grassland'] +
+            out_stats_all['Bare soil'] +
+            out_stats_all['Bare rock']
+            )
+        out_stats_all['Water'] = (
+            out_stats_all['Waterbody'] +
+            out_stats_all['Riverbed']
+            )
         out_stats_all = out_stats_all.rename(columns={
             'Cropland':'Agriculture [ha]',
             'Dense forest':'Forest [ha]',
@@ -506,11 +556,20 @@ class LulcData:
             'Water':'Waterbody [ha]',
             'Built-up area':'Urban [ha]'
         })
-        selected_LULC = ['Agriculture [ha]', 'Forest [ha]', 'Grassland [ha]', 'Waterbody [ha]', 'Urban [ha]']
+        selected_LULC = [
+            'Agriculture [ha]',
+            'Forest [ha]',
+            'Grassland [ha]',
+            'Waterbody [ha]',
+            'Urban [ha]'
+            ]
+        
+        ####### Generating output files: ######################################
         #List of years between start and end
         years = list(range(start_year, end_year))
         
-        #Dictionary to store dataframes as they are created in the next steps:
+        #Dictionary to store dataframes as they are created in the next
+        #steps:
         sub_catchment_dfs = {}
         
         #Loop through each subcatchment in the main one:
@@ -525,11 +584,13 @@ class LulcData:
                 ['$DecimalSymbol = .', '', '', '']
             ]
             
-            #Create a dataframe with a row for each year in the modelling timeframe:
+            #Create a dataframe with a row for each year in the
+            #modelling timeframe:
             time_series_df = pd.DataFrame({'$Columns = Year' :years})
             
-            #For each type of land use in selected_LULC, create a column for that LU, with the same value
-            #for each year in the time period (values will stay constant through time):
+            #For each type of land use in selected_LULC, create a column
+            #for that LU, with the same value for each year in the time
+            #period (values will stay constant through time):
             for land_use in selected_LULC:
                 time_series_df[land_use] = row[land_use]
             
@@ -547,13 +608,18 @@ class LulcData:
             #Write file to CSV with sensible name
             area = self.input_vector_file_name.split('_')[0]
             this_filename = f'{area}_{subcatchment}_LULC_Areas'
-            time_series_df.to_csv(rf'{self.output_loc}\{this_filename}.csv', index=False)
-            
-        return True
+            time_series_df.to_csv(
+                rf'{self.output_loc}\{this_filename}.csv',
+                index=False
+                )
         
     def __str__(self):
         """Define what to show when instance is presented as a string"""
-        return f'Land Use/Land Cover data for {self.input_vector_file_name.split('_')[0]}.'
+        output_string = (
+            'Land Use/Land Cover data for '
+            f'{self.input_vector_file_name.split('_')[0]}.'
+            )
+        return output_string
 
 ####### Urban Demand data: ####################################################
 
