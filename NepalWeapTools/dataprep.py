@@ -517,7 +517,7 @@ class UrbDemData:
         census_year: year the census we are using data for was conducted
         
         Notes:
-        - All relevant data files must be stored in the package's InputData\Demand folder
+        - All relevant data files must be stored in the package's InputData\\Demand folder
         - Start and end dates must be in a valid ISO8601 format as per datetime.datetime.fromisoformat()
         """
         
@@ -550,7 +550,7 @@ class UrbDemData:
         #Store static parameters:
         self.municipality = municipality
         self.start_date = util.date_standardiser(start_date)
-        self.end_date = util.date_standardiser(end_date)
+        self.end_date =  util.date_standardiser(end_date)
         self.propn_full_plumb = perc_full_plumb / 100
         self.propn_not_plumb = 1 - self.propn_full_plumb
         self.num_hotels = num_hotels
@@ -717,8 +717,57 @@ class UrbDemData:
         temp_utilities.set_crs(epsg=self.ward_demand.crs.to_epsg())
         self.utility_demand = temp_utilities
         
-            
+    def to_weap_data(self):
+        """
+        Placeholder docstring
         
+        ----------------------------------------------------------------
+        Notes:
+        - WEAP data in this instance is expecting a csv for each utility
+        service area, for each demand type. It simply generates a date
+        range for every day between the supplied start and end dates, 
+        then copies the calculated daily demand into every row.
+        ----------------------------------------------------------------
+        """
+        ####### Method start ##################################################
+        #Get an array of dates between start and end:
+        date_array = pd.date_range(
+            start=self.start_date,
+            end=self.end_date,
+            ).date
+        self.date_range = [date.strftime('%Y-%m-%d') for date in date_array]
+        out_cols = [a for a in self.utility_demand.columns if a not in
+            ['geometry', 'Utility']
+            ]
+        #get the number of empty strings required for output headers:
+        num_blanks  = [ '' for i in range(len(out_cols))]
+        
+        #Go through each utility area and write an output file:
+        for _, row in self.utility_demand.iterrows():
+            #create a dataframe with a row for each date:
+            this_df = pd.DataFrame({'$Columns = Date':self.date_range})
+            #Store the utility name for the output file name:
+            this_name = row['Utility']
+            #Populate with the same demand value for each date:
+            for col in out_cols:
+                this_df[col] = row[col]
+            
+            #Generate the WEAP file headers:
+            this_df.columns = pd.MultiIndex.from_tuples(
+                zip(
+                    ['$ListSeparator = ,'] + num_blanks,
+                    ['$DecimalSymbol = .'] + num_blanks,
+                    this_df.columns
+                    )
+                )
+            
+            #Write to file with meaningful name:
+            this_filename = f'{this_name}_demand'
+            this_df.to_csv(
+                rf'{self.output_loc}\{this_filename}.csv',
+                index=False
+                )
+            
         
     def __str__(self):
         """Define what to show when instance is presented as a string"""
