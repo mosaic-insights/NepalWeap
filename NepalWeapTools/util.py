@@ -19,7 +19,7 @@ Part of the NepalWeapTools package, this module contains functions
 commonly required by the classes in the other package modules
 ------------------------------------------------------------------------
 """
-####### Package imports: #######
+####### Package imports: ######################################################
 import datetime as dt
 import numpy as np
 import pandas as pd
@@ -31,7 +31,8 @@ from shapely.geometry import Point
 import overpy
 import json
 
-
+####### Date standardiser: ####################################################
+#-----------------------------------------------------------------------
 def date_standardiser(date_string):
     """Convert date string to YYYY-MM-DD"""
     # Try to parse the date_string assuming its in an ISO format
@@ -39,18 +40,29 @@ def date_standardiser(date_string):
         date_object = dt.datetime.fromisoformat(str(date_string)).date() 
     except ValueError:
         try:
-            date_object = dt.datetime.strptime(date_string, '%d/%m/%Y').date()
+            date_object = dt.datetime.strptime(
+                date_string,
+                '%d/%m/%Y'
+                ).date()
         except ValueError:
             try:
-                date_object = dt.datetime.strptime(date_string, '%d/%b/%Y').date()
+                date_object = dt.datetime.strptime(
+                    date_string,
+                    '%d/%b/%Y'
+                    ).date()
             except ValueError:
                 try:
-                    date_object = dt.datetime.strptime(date_string, '%m/%d/%Y').date()
+                    date_object = dt.datetime.strptime(
+                        date_string,
+                        '%m/%d/%Y'
+                        ).date()
                 except ValueError:
                     return None
-    # If successful, format the date_object to 'YYYY-MM-DD' and return it
+    # If success, format the date_object to 'YYYY-MM-DD' and return it
     return date_object.strftime('%Y-%m-%d')
 
+####### Compare sheet names: ##################################################
+#-----------------------------------------------------------------------
 def compare_sheet_names(sheet_names:list, objects:list):
     """Remove objects from list if they're not in sheet_names"""
     #Get the set of strings in both:
@@ -58,31 +70,42 @@ def compare_sheet_names(sheet_names:list, objects:list):
     
     #If there's none, raise an error:
     if not matches:
-        raise ValueError('None of the provided list elements matched worksheet names.')
+        raise ValueError(
+            'None of the provided list elements matched worksheet names.'
+            )
     
     #Get the unmatched ones:
     unmatched = set(objects) - set(sheet_names)
     if unmatched:
-        print(f'Warning: {unmatched} were not found in Excel file and have been removed')
+        print(
+            f'Warning: {unmatched} were not found in Excel file'
+            ' and have been removed'
+            )
     
     new_obj = [a for a in objects if a in sheet_names]
     return new_obj
-    
+
+####### Get raster details: ###################################################
+#-----------------------------------------------------------------------
 def get_raster_deets(GeoTIFF):
     """
-    Extracts and returns a bunch of useful information about a GeoTIFF raster
+    Extracts and returns a bunch of useful information about a GeoTIFF 
+    raster
 
-    Args:
-    -Raster: a 'path\filename.ext' string to the GeoTIFF raster
+    Parameters:
+    - Raster: a 'path\filename.ext' string to the GeoTIFF raster
 
     Returns:
-    -A dictionary with a bunch of useful info about the raster
-    -The data from the raster as a numpy ndarray
-    -The metadata as a dictionary
+    - A dictionary with a bunch of useful info about the raster
+    - The data from the raster as a numpy ndarray
+    - The metadata as a dictionary
     
+    --------------------------------------------------------------------
     Notes:
-    -The The RasterInfo and Meta dictionaries have some overlap. RasterInfo is meant for easy access in other lines of code,
-    Meta is designed to be attachable when the raster is processed or written as a GeoTIFF.
+    - The RasterInfo and Meta dictionaries have some overlap. RasterInfo
+    is meant for easy access in other lines of code, meta is designed to
+    be attachable when the raster is processed or written as a GeoTIFF.
+    --------------------------------------------------------------------
     """
     with rasterio.open(GeoTIFF) as src:
         RasterInfo = {}
@@ -99,22 +122,36 @@ def get_raster_deets(GeoTIFF):
         Meta = src.meta
         
     return RasterInfo, Array, Meta
-    
-def get_zonal_stats(in_raster, in_meta, gdf, class_dict:dict, key_field_name:str='Name'):
+
+####### Get zonal stats: ######################################################
+#-----------------------------------------------------------------------
+def get_zonal_stats(
+    in_raster,
+    in_meta,
+    gdf,
+    class_dict:dict,
+    key_field_name:str='Name'
+    ):
     """
     Get zonal stats for a raster without relying on rasterstats
     
     Parameters:
-    in_raster: numpy array representing raster values
-    in_meta: metadata dictionary associated with the raster array
-    gdf: Geopandas GeoDataFrame in the same CRS as the raster
-    class_dict: dictionary of what the numerical values in the raster corrspond to as categories
-    key_field_name: name of the field in the geodataframe which can be used to uniquely identify features
+    - in_raster: numpy array representing raster values
+    - in_meta: metadata dictionary associated with the raster array
+    - gdf: Geopandas GeoDataFrame in the same CRS as the raster
+    - class_dict: dictionary of what the numerical values in the raster
+    correspond to as categories
+    - key_field_name: name of the field in the geodataframe which can be
+    used to uniquely identify features
     
     Returns:
-    
+    - A dataframe with the number of times each class appears in each
+    subcatchment
+    --------------------------------------------------------------------
+    --------------------------------------------------------------------
     """
-    #Convert numeric values in the input raster to their text equivalents:
+    #Convert numeric values in the input raster to their text
+    #equivalents:
     print('Getting zonal stats with get_zonal_stats()...')
     
     raw_stats = pd.DataFrame()
@@ -134,7 +171,8 @@ def get_zonal_stats(in_raster, in_meta, gdf, class_dict:dict, key_field_name:str
                 #get just the current zone
                 masked_ras, _ = mask(dataset, [this_geom], crop=True)
                 
-                #Get a dictionary with the number of times each unique element appears:
+                #Get a dictionary with the number of times each unique
+                #element appears:
                 cats, counts = np.unique(masked_ras, return_counts=True)
                 freqs = dict(zip(cats, counts))
                 freqs['Subcatchment'] = this_name
@@ -144,19 +182,34 @@ def get_zonal_stats(in_raster, in_meta, gdf, class_dict:dict, key_field_name:str
                 this_row = this_row.drop('Subcatchment', axis=1)
                 raw_stats = pd.concat([raw_stats, this_row], axis=0)
     
-    #Replace NaN values with 0 and format the dataframe for easy interpretation:
-    raw_stats = raw_stats.fillna(0).rename(class_dict, axis='columns').sort_index().sort_index(axis=1)
+    #Replace NaN values with 0 and format the dataframe for easy
+    #interpretation:
+    raw_stats = raw_stats.fillna(0).rename(
+        class_dict,
+        axis='columns'
+        ).sort_index().sort_index(axis=1)
     raw_stats['None'] = raw_stats.pop('None')
     
     return raw_stats       
-                
+
+####### Get OSM locations: ####################################################
+#-----------------------------------------------------------------------
 def get_osm_locations(tag_dict, bbox):
     """
-    Gets the locations/info for specified types of things in a specified bounding box
+    Gets the locations/info for specified types of things in a specified
+    bounding box
     
     Parameters:
-    tag_dict: a dictionary of node tag key: value elements like {'Tag key': 'tag value'}
-    bbox: a tuple of lat/lon coordinates (miny, minx, maxy, maxx) defining the search envelope
+    - tag_dict: a dictionary of node tag key: value elements like
+    {'Tag key': 'tag value'}
+    - bbox: a tuple of lat/lon coordinates (miny, minx, maxy, maxx)
+    defining the search envelope
+    
+    Returns:
+    - A geodataframe of feature locations with their name and type,
+    within the bounding box
+    --------------------------------------------------------------------
+    --------------------------------------------------------------------
     """
     #Build a string of tag searches for the query:
     searches = []
@@ -177,9 +230,13 @@ def get_osm_locations(tag_dict, bbox):
     for node in result.nodes:
         #get the type dynamically based on the tag_dict provided
         type_val = next(
-            (value for key, value in node.tags.items() if key in tag_dict.keys()),
+            (
+                value for key, value
+                in node.tags.items()
+                if key in tag_dict.keys()
+                ),
             'Unknown' #Default value
-        )
+            )
         places.append({
             "name": node.tags.get("name", "Unknown"),
             "type": type_val,
@@ -189,49 +246,78 @@ def get_osm_locations(tag_dict, bbox):
 
     # Convert data to GeoDataFrame
     gdf_places = gpd.GeoDataFrame(
-        places, geometry=[Point(p["lon"], p["lat"]) for p in places], crs="EPSG:4326"
+        places,
+        geometry=[Point(p["lon"], p["lat"]) for p in places],
+        crs="EPSG:4326"
     )
     
     return gdf_places
-    
+
+####### Rescale to census: ####################################################
+#-----------------------------------------------------------------------
 def rescale_to_census(locations, wards, census_num, name:str):
     """
-    Rescales numbers of a certain feature per ward, based on the official number for the 
-    study area.
+    Rescales numbers of a certain feature per ward, based on the
+    official number for the study area.
     
     Parameters:
-    locations: GeoDataFrame of locations of a specific type in the area of interest
-    wards: GeoDataFrame of the ward boundaries in the AOI
-    census_num: official number of that specific type of amenity 
-    name: place type to append to column names in output dataframe
+    - locations: GeoDataFrame of locations of a specific type in the
+    area of interest
+    - wards: GeoDataFrame of the ward boundaries in the AOI
+    - census_num: official number of that specific type of amenity 
+    - name: place type to append to column names in output dataframe
     
     Returns:
-    Dataframe with the scaled numbers, with the ward number as the index
+    - Dataframe with the scaled numbers, with the ward number as the
+    index
+    --------------------------------------------------------------------
+    --------------------------------------------------------------------
     """
-    #Perform spatial join to get the ward number for each commercial location:
-    places_with_wards = gpd.sjoin(locations, wards, how='left', predicate='within')
+    #Perform spatial join to get the ward number for each commercial
+    #location:
+    places_with_wards = gpd.sjoin(
+        locations,
+        wards,
+        how='left',
+        predicate='within'
+        )
     
-    # Count number of hotels and hospitals per ward
-    ward_counts = places_with_wards.groupby(["NEW_WARD_N", "type"]).size().unstack(fill_value=0)
+    #Count number of hotels and hospitals per ward:
+    ward_counts = places_with_wards.groupby(
+        ["NEW_WARD_N", "type"]
+        ).size().unstack(fill_value=0)
     
-    # Ensure all wards are included by merging with the full list of wards
+    #Ensure all wards are included by merging with the full list of
+    #ward:
     all_wards = pd.DataFrame(wards[["NEW_WARD_N"]])
-    ward_counts = all_wards.merge(ward_counts, on="NEW_WARD_N", how="left").fillna(0)
+    ward_counts = all_wards.merge(
+        ward_counts,
+        on="NEW_WARD_N",
+        how="left"
+        ).fillna(0)
+    
     #Rename columns for clarity:
     ward_counts.columns = ['Ward', 'OSM count']
     ward_counts = ward_counts.sort_values(by='Ward').set_index('Ward')
     
     #Get proportion from OSM in each ward:
-    ward_counts['OSM proportion'] = ward_counts['OSM count'] / ward_counts['OSM count'].sum()
+    ward_counts['OSM proportion'] = (
+        ward_counts['OSM count'] / ward_counts['OSM count'].sum()
+        )
     
-    #Scale the proportions in each ward by the total number reported in the census:
+    #Scale the proportions in each ward by the total number reported in
+    #the census:
     ward_counts['scaled number'] = ward_counts['OSM proportion'] * census_num
-    ward_counts = ward_counts.drop(labels=['OSM count', 'OSM proportion'], axis=1)
+    ward_counts = ward_counts.drop(
+        labels=['OSM count', 'OSM proportion'],
+        axis=1
+        )
     ward_counts.columns = [name + ' scaled number']
     
     return ward_counts
                 
-                
+####### Areal interpolation: ##################################################
+#-----------------------------------------------------------------------
 def areal_interp(
     wards,
     service_area, 
@@ -246,21 +332,24 @@ def areal_interp(
         ]
     ):
     """
-    Estimate total water demand for a service area based on its consituent
-    wards.
+    Estimate total water demand for a service area based on its
+    consituent wards.
     
     Parameters:
-    wards: geodataframe of ward boundary polgons with attributes for demand
-    service_area: geodataframe of a single service area polygon
-    eq_ar_proj: epsg code for the desired equal-area proejction to use
-    demand_cols: list of column names in the wards file
+    - wards: geodataframe of ward boundary polgons with attributes for
+    demand
+    - service_area: geodataframe of a single service area polygon
+    - eq_ar_proj: epsg code for the desired equal-area proejction to use
+    - demand_cols: list of column names in the wards file
     
     Returns:
-    Geodataframe of the service area polygon with the estimated total demand
-    
+    - Geodataframe of the service area polygon with the estimated total
+    demand
+    --------------------------------------------------------------------
     Notes:
-    - This is a crude areal interpolator which assumes uniform demand across
-    the wards
+    - This is a crude areal interpolator which assumes uniform demand
+    across the wards
+    --------------------------------------------------------------------
     """
     #Get and store the input CRS:
     input_crs = wards.crs.to_epsg()
