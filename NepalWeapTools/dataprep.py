@@ -621,11 +621,15 @@ class LulcData:
             )
         return output_string
 
+#------------------------------------------------------------------------------
 ####### Urban Demand data: ####################################################
+#------------------------------------------------------------------------------
 
 class UrbDemData:
     """
-    Placeholder docstring
+    Load, calculate, and store water demand data
+    --------------------------------------------------------------------
+    --------------------------------------------------------------------
     """
     
     def __init__(self, municipality:str,
@@ -652,49 +656,72 @@ class UrbDemData:
         census_year:int=2021
         ):
         """
-        Collate and load data required for urban water demand calculations.
+        Collate and load data required for urban water demand
+        calculations.
         
         Parameters:
-        municipality: Name of the municipality (Pokhara, Tulsipur etc.) of interest
-        start_date: start date for the WEAP modelling (inclusive)
-        end_date: end date for modelling (inclusive)
-        pop_data_file: filename.ext for excel file containing population summaries per ward
-        student_data_file: filename.ext for excel file containing number of students per ward
-        wards_data_file: filename.ext for shapefile of ward boundaries
-        utility_data_files: list of filename.ext strings for shapefiles of water utility service areas
-        perc_full_plumb: integer representing the percentage of homes in the municipality with plumbing
-        num_hotels: number of hotels reported in Nepal 2021 to scale OpenStreetMap data to
-        num_hotel_beds: average number of beds per hotel
-        num_hospitals: number of hospitals reported in Nepal 2021 to scale OpenStreetMap data to
-        num_hospital_beds: average number of beds per hospital
-        demand_student: assumed daily water demand per student
-        demand_full_plumb_home: assumed daily water demand, per person, in cubic metres (m3/d) for plumbed home
-        demand_not_plumb_home: assumed daily water demand, per person, in cubic metres (m3/d) for un-plumbed home
-        demand_hotel_bed: assumed daily water demand per bed, in cubic metres (m3/d) for a hotel
-        demand_hospital_bed:assumed daily water demand per bed, in cubic metres (m3/d) for a hospital
-        demand_other_comm: assumed daily water demand per commercial population, in cubic metres (m3/d)
-        other_comm_denom: denominator of the fraction of the population assumed to be commercial i.e. 3
-            means one third of the population.
-        munic_dem_propn: The amount of municipal demand, relative to the 
-            sum of domestic, institutional, and commercial.
-        indust_dem_propn: The amount of industrial demand, relative to
-            the sum of domestic, institutional, and commercial.
-        census_year: year the census we are using data for was conducted
+        - municipality: Name of the municipality (Pokhara, 
+        Tulsipur etc.) of interest
+        - start_date: start date for the WEAP modelling (inclusive)
+        - end_date: end date for modelling (inclusive)
+        - pop_data_file: filename.ext for excel file containing population
+        summaries per ward
+        - student_data_file: filename.ext for excel file containing
+        number of students per ward
+        - wards_data_file: filename.ext for shapefile of ward boundaries
+        - utility_data_files: list of filename.ext strings for shapefiles
+        of water utility service areas
+        - perc_full_plumb: integer representing the percentage of homes in
+        the municipality with plumbing
+        - num_hotels: number of hotels reported in Nepal 2021 to scale
+        OpenStreetMap data to
+        - num_hotel_beds: average number of beds per hotel
+        - num_hospitals: number of hospitals reported in Nepal 2021 to
+        scale OpenStreetMap data to
+        - num_hospital_beds: average number of beds per hospital
+        - demand_student: assumed daily water demand per student
+        - demand_full_plumb_home: assumed daily water demand, per
+        person, in cubic metres (m3/d) for plumbed home
+        - demand_not_plumb_home: assumed daily water demand, per person,
+        in cubic metres (m3/d) for un-plumbed home
+        - demand_hotel_bed: assumed daily water demand per bed, in cubic
+        metres (m3/d) for a hotel
+        - demand_hospital_bed:assumed daily water demand per bed, in
+        cubic metres (m3/d) for a hospital
+        - demand_other_comm: assumed daily water demand per commercial
+        population, in cubic metres (m3/d)
+        - other_comm_denom: denominator of the fraction of the
+        population assumed to be commercial i.e. 3 means one third of
+        the population.
+        - munic_dem_propn: The amount of municipal demand, relative to
+        the sum of domestic, institutional, and commercial.
+        - indust_dem_propn: The amount of industrial demand, relative to
+        the sum of domestic, institutional, and commercial.
+        - census_year: year the census we are using data for was
+        conducted
         
+        ----------------------------------------------------------------
         Notes:
-        - All relevant data files must be stored in the package's InputData\\Demand folder
-        - Start and end dates must be in a valid ISO8601 format as per datetime.datetime.fromisoformat()
+        - All relevant data files must be stored in the package's
+        InputData\\Demand folder
+        - Start and end dates must be in a valid ISO8601 format as per
+        datetime.datetime.fromisoformat()
+        ----------------------------------------------------------------
         """
-        
+        ####### Method start ##################################################
         #Get the directory relative to the current script (dataprep.py)
-        current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        current_dir = os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__))
+            )
         #Construct the path to the InputData folder
         input_data_loc = os.path.join(current_dir, r'InputData\Demand')
         #Set the location for output files:
         self.output_loc = os.path.join(current_dir, r'OutputData')
         
         #Bring in the wards:
-        input_wards = gpd.read_file(os.path.join(input_data_loc, wards_data_file))
+        input_wards = gpd.read_file(
+            os.path.join(input_data_loc, wards_data_file)
+            )
         print(f'Wards file read. Its CRS is EPSG:{input_wards.crs.to_epsg()}')
         if input_wards.crs.to_epsg() != 4326:
             print(f'Reprojecting wards file to WGS84 GCS (EPSG:4326)...')
@@ -711,7 +738,11 @@ class UrbDemData:
         
         #Check that plumbing values are correct
         if perc_full_plumb < 0 or perc_full_plumb > 100:
-            raise ValueError(f'perc_full_plumb must be an integer in range [0,100] but {perc_full_plumb} was provided.')
+            raise ValueError(
+                'perc_full_plumb must be an integer in range [0,100] but'
+                f' {perc_full_plumb} was provided.'
+                )
+        
         #Store static parameters:
         self.municipality = municipality
         self.start_date = util.date_standardiser(start_date)
@@ -736,17 +767,32 @@ class UrbDemData:
         ####### Domestic demands: #############################################
         #Read in the excel file:
         pop_data = pd.read_excel(os.path.join(input_data_loc, pop_data_file))
-        pop_data = pop_data[['Ward', 'Total population', 'Number of households', 'Average household size']]
+        pop_data = pop_data[[
+            'Ward',
+            'Total population',
+            'Number of households',
+            'Average household size'
+            ]]
         
         #Calculate a domestic demand column:
-        pop_data['Household pop'] = pop_data['Number of households'] * pop_data['Average household size']
-        pop_data['Fully plumbed pop'] = pop_data['Household pop'] * self.propn_full_plumb
-        pop_data['Not plumbed pop'] = pop_data['Household pop'] * self.propn_not_plumb
+        pop_data['Household pop'] = (
+            pop_data['Number of households'] *
+            pop_data['Average household size']
+            )
+        pop_data['Fully plumbed pop'] = (
+            pop_data['Household pop'] *
+            self.propn_full_plumb
+            )
+        pop_data['Not plumbed pop'] = (
+            pop_data['Household pop'] *
+            self.propn_not_plumb
+            )
         pop_data['Domestic demand [m3/d]'] = (
             (pop_data['Fully plumbed pop'] * demand_full_plumb_home)
             +
             (pop_data['Not plumbed pop'] * demand_not_plumb_home)
         )
+        
         #Trim the helper columns and start building a summary dataframe:
         demand_data = pop_data.drop(
             labels=[
@@ -762,15 +808,36 @@ class UrbDemData:
         
         ####### Institutional demands (educational): ##########################
         #Read in the excel file:
-        inst_data = pd.read_excel(os.path.join(input_data_loc, student_data_file))
+        inst_data = pd.read_excel(
+            os.path.join(input_data_loc, student_data_file)
+            )
+            
         #Calculate the demand column:
-        inst_data['Institutional demand [m3/d]'] = inst_data['Currently attending'] * self.demand_student
-        inst_data = inst_data.drop(labels=['Currently attending'], axis='columns').set_index('Ward')
-        demand_data = demand_data.merge(inst_data, how='outer', left_index=True, right_index=True)
+        inst_data['Institutional demand [m3/d]'] = (
+            inst_data['Currently attending'] *
+            self.demand_student
+            )
+        
+        #Drop unnecessary column and set Ward as the index:    
+        inst_data = inst_data.drop(
+            labels=['Currently attending'],
+            axis='columns'
+            ).set_index('Ward')
+        
+        #Add the institutional demand to this instance's existing demand
+        #dataframe:
+        demand_data = demand_data.merge(
+            inst_data,
+            how='outer',
+            left_index=True,
+            right_index=True
+            )
         
         ####### Commercial demands: ###########################################
-        #get a bounding box in the format expected by util.get_osm_locations():
+        #get a bounding box in the format expected by
+        #util.get_osm_locations():
         lat_long_bbox = (self.miny, self.minx, self.maxy, self.maxx)
+        
         #Store relevant values as a dictionary:
         frames = {
             'Hotel': {
@@ -787,38 +854,62 @@ class UrbDemData:
                 }
             }
         
-        #Get a dataframe with just the census-scaled numbers for each ward:
+        #Get a dataframe with just the census-scaled numbers for each
+        #ward:
         ward_scaled_nums = pd.DataFrame(
             self.wards[["NEW_WARD_N"]].rename(
                 {"NEW_WARD_N": 'Ward'},
                 axis=1
                 ).sort_values(by='Ward').set_index('Ward')
             )
-        dem_col_names = []
+        
         #Populate the scaled values for each feature type:
+        dem_col_names = []
         for key, value in frames.items():
             #Get locations
             these_locs = util.get_osm_locations(value['tag'], lat_long_bbox)
             #Rescale values to OSM proportion of census numbers:
-            this_df = util.rescale_to_census(these_locs, self.wards, value['num'], key)
+            this_df = util.rescale_to_census(
+                these_locs,
+                self.wards,
+                value['num'],
+                key
+                )
             #Calculate total beds and the demand:
             tot_bed_col = key + ' total beds'
-            this_df[tot_bed_col] = this_df[key + ' scaled number'] * value['beds']
+            this_df[tot_bed_col] = (
+                this_df[key + ' scaled number'] *
+                value['beds']
+                )
             dem_col = key + ' demand'
             dem_col_names.append(dem_col)
             this_df[dem_col] = this_df[tot_bed_col] * value['dem']
             #Add to the exisitng dataframe
-            ward_scaled_nums = ward_scaled_nums.merge(this_df, left_index=True, right_index=True, how='left')
+            ward_scaled_nums = ward_scaled_nums.merge(
+                this_df,
+                left_index=True,
+                right_index=True,
+                how='left'
+                )
         
         #Bring the population in and calculate 'other' commercial demand:
-        temp_pop = pop_data[['Ward', 'Total population']].sort_values(by='Ward').set_index('Ward')
+        temp_pop = pop_data[[
+            'Ward',
+            'Total population'
+            ]].sort_values(by='Ward').set_index('Ward')
         ward_scaled_nums = ward_scaled_nums[dem_col_names].merge(
-            temp_pop, left_index=True, right_index=True, how='left'
+            temp_pop,
+            left_index=True,
+            right_index=True,
+            how='left'
             )
         ward_scaled_nums['Other demand'] = (
-            (ward_scaled_nums['Total population'] / self.other_comm_denom) * self.demand_other_comm
+            (ward_scaled_nums['Total population'] / self.other_comm_denom) *
+            self.demand_other_comm
             )
-        #Add up the three sources for total commercial demand, and join in back to the main demand DF:
+        
+        #Add up the three sources for total commercial demand, and join
+        #in back to the main demand DF:
         ward_scaled_nums['Commercial demand [m3/d]'] = (
             ward_scaled_nums['Hotel demand'] + 
             ward_scaled_nums['Hospital demand'] + 
@@ -874,7 +965,9 @@ class UrbDemData:
         #one geodataframe
         temp_utilities = gpd.GeoDataFrame()
         for utility_file in utility_data_files:
-            this_utility = gpd.read_file(os.path.join(input_data_loc, utility_file))
+            this_utility = gpd.read_file(
+                os.path.join(input_data_loc, utility_file)
+                )
             utility_demand = util.areal_interp(self.ward_demand, this_utility)
             utility_demand['Utility'] = utility_file.split('.')[0]
             temp_utilities = pd.concat([temp_utilities, utility_demand])
