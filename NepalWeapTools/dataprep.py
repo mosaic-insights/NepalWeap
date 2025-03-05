@@ -719,7 +719,7 @@ class UrbDemData:
         
     def to_weap_data(self):
         """
-        Placeholder docstring
+        Export csv files of demand by utility service area
         
         ----------------------------------------------------------------
         Notes:
@@ -771,4 +771,4 @@ class UrbDemData:
         
     def __str__(self):
         """Define what to show when instance is presented as a string"""
-        pass
+        return f'Urban demand data instance for {self.municipality}'
