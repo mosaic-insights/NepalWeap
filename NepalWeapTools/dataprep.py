@@ -632,7 +632,8 @@ class UrbDemData:
     --------------------------------------------------------------------
     """
     
-    def __init__(self, municipality:str,
+    def __init__(self,
+        municipality:str,
         start_date:str,
         end_date:str,
         pop_data_file:str,
@@ -664,15 +665,15 @@ class UrbDemData:
         Tulsipur etc.) of interest
         - start_date: start date for the WEAP modelling (inclusive)
         - end_date: end date for modelling (inclusive)
-        - pop_data_file: filename.ext for excel file containing population
-        summaries per ward
+        - pop_data_file: filename.ext for excel file containing
+        population summaries per ward
         - student_data_file: filename.ext for excel file containing
         number of students per ward
         - wards_data_file: filename.ext for shapefile of ward boundaries
-        - utility_data_files: list of filename.ext strings for shapefiles
-        of water utility service areas
-        - perc_full_plumb: integer representing the percentage of homes in
-        the municipality with plumbing
+        - utility_data_files: list of filename.ext strings for 
+        shapefiles of water utility service areas
+        - perc_full_plumb: integer representing the percentage of homes
+        in the municipality with plumbing
         - num_hotels: number of hotels reported in Nepal 2021 to scale
         OpenStreetMap data to
         - num_hotel_beds: average number of beds per hotel
@@ -1030,3 +1031,99 @@ class UrbDemData:
     def __str__(self):
         """Define what to show when instance is presented as a string"""
         return f'Urban demand data instance for {self.municipality}'
+        
+#------------------------------------------------------------------------------
+####### Future Urban Demand: ##################################################
+#------------------------------------------------------------------------------
+
+class FutUrbDem(UrbDemData):
+    """
+    Version of UrbDemData which first projects future population numbers
+    and uses those for the UrbDemData instance
+    --------------------------------------------------------------------
+    --------------------------------------------------------------------
+    """
+    
+    def __init__(self,
+        municipality:str,
+        start_date:str,
+        end_date:str,
+        
+        pop_change_file:str,
+        fut_pop_year:int,
+        
+        student_data_file:str,
+        wards_data_file:str,
+        utility_data_files:list,
+        perc_full_plumb,
+        num_hotels,
+        num_hotel_beds,
+        num_hospitals,
+        num_hospital_beds,
+        demand_student:float=0.01,
+        demand_full_plumb_home:float=0.112,
+        demand_not_plumb_home:float=0.045,
+        demand_hotel_bed:float=0.2,
+        demand_hospital_bed:float=0.5,
+        demand_other_comm:float=0.01,
+        other_comm_denom=3,
+        munic_dem_propn:float=0.075,
+        indust_dem_propn:float=0.225,
+        census_year:int=2021
+        ):
+        """
+        Recalculate population, then load UrbDemData instance
+        
+        Parameters:
+        - municipality: Name of the municipality (Pokhara, 
+        Tulsipur etc.) of interest
+        - start_date: start date for the WEAP modelling (inclusive)
+        - end_date: end date for modelling (inclusive)
+        
+        - pop_change_file: filename.ext for excel file containing
+        population figures for each ward across two sequential censuses
+        - fut_pop_year: year for which population forecast is required
+        
+        - student_data_file: filename.ext for excel file containing
+        number of students per ward
+        - wards_data_file: filename.ext for shapefile of ward boundaries
+        - utility_data_files: list of filename.ext strings for
+        shapefiles of water utility service areas
+        - perc_full_plumb: integer representing the percentage of homes
+        in the municipality with plumbing
+        - num_hotels: number of hotels reported in Nepal 2021 to scale
+        OpenStreetMap data to
+        - num_hotel_beds: average number of beds per hotel
+        - num_hospitals: number of hospitals reported in Nepal 2021 to
+        scale OpenStreetMap data to
+        - num_hospital_beds: average number of beds per hospital
+        - demand_student: assumed daily water demand per student
+        - demand_full_plumb_home: assumed daily water demand, per
+        person, in cubic metres (m3/d) for plumbed home
+        - demand_not_plumb_home: assumed daily water demand, per person,
+        in cubic metres (m3/d) for un-plumbed home
+        - demand_hotel_bed: assumed daily water demand per bed, in cubic
+        metres (m3/d) for a hotel
+        - demand_hospital_bed:assumed daily water demand per bed, in
+        cubic metres (m3/d) for a hospital
+        - demand_other_comm: assumed daily water demand per commercial
+        population, in cubic metres (m3/d)
+        - other_comm_denom: denominator of the fraction of the
+        population assumed to be commercial i.e. 3 means one third of
+        the population.
+        - munic_dem_propn: The amount of municipal demand, relative to
+        the sum of domestic, institutional, and commercial.
+        - indust_dem_propn: The amount of industrial demand, relative to
+        the sum of domestic, institutional, and commercial.
+        - census_year: year the census we are using data for was
+        conducted
+        
+        ----------------------------------------------------------------
+        Notes:
+        - All relevant data files must be stored in the package's
+        InputData\\Demand folder
+        - Start and end dates must be in a valid ISO8601 format as per
+        datetime.datetime.fromisoformat()
+        ----------------------------------------------------------------
+        """
+        ####### Method start ##################################################
