@@ -403,10 +403,53 @@ def pop_forecast(pop_dataframe):
     population
     --------------------------------------------------------------------
     Notes:
-    - 
+    - Requires that the column names have a four-digit year somewhere in
+    them, and no other numeric characters
     --------------------------------------------------------------------
     """
+    print('Forecasting future population...')
     input_cols = pop_dataframe.columns
     year_cols = [''.join([c for c in h if c.isdigit()]) for h in input_cols]
-    print(year_cols)
+    #Check that the remaining strings are valid years:
+    for item in year_cols:
+        #Check that the resulting year is four digits long:
+        if len(item) != 4:
+            raise ValueError(
+                'Column names in population change file must include a '
+                '4-digit string that can convert to a year. At least '
+                f'one column had a year of length {len(item)}, or had '
+                'other non-year numeric characters in. The first issue '
+                f'encountered was in {item}.'
+                )
     
+    #Assign the new columns, then sort so we have ascending years:
+    pop_dataframe.columns = year_cols
+    pop_dataframe = pop_dataframe.sort_index(axis='columns')
+    
+    #Empty list to store the future pops as they are calculated:
+    pop_change_rates = []
+    
+    #Go through each row (ward):
+    for i in range(len(pop_dataframe.index)):
+        num_years = 0
+        pop_change = 0
+        this_ward = pop_dataframe.iloc[[i]]
+        start_pop = this_ward.iloc[0, 0]
+        #Go through each column (census year):
+        for j in range(len(pop_dataframe.columns) - 1):
+            y1 = int(pop_dataframe.columns[j])
+            y1_pop = this_ward.iloc[0, j]
+            y2 = int(pop_dataframe.columns[j+1])
+            y2_pop = this_ward.iloc[0, j+1]
+            #Number of elapsed years:
+            num_years += (y2 - y1)
+            #Gross population change:
+            pop_change += (y2_pop - y1_pop)
+        
+        annual_change = pop_change / num_years
+        rate_pa = annual_change / start_pop
+        pop_change_rates.append(rate_pa)
+        
+    pop_dataframe['Change rate'] = pop_change_rates
+    print(pop_dataframe)
+        

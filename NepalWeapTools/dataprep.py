@@ -1141,7 +1141,7 @@ class FutUrbDem(UrbDemData):
         pop_change = pd.read_excel(
             os.path.join(input_data_loc, pop_change_file)
             ).set_index('Ward')
-        print(pop_change)
+        #print(pop_change)
         util.pop_forecast(pop_change)
         
         
