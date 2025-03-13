@@ -391,8 +391,22 @@ def areal_interp(
     ea_utility.columns = [a.replace('SA ', '') for a in ea_utility.columns]
     return ea_utility.to_crs(epsg=input_crs)
     
-                
-                
-                
-                
-                
+####### Population forecasting: ###############################################
+#-----------------------------------------------------------------------
+def pop_forecast(pop_dataframe):
+    """
+    Estimate populations in future years based on levels in previous
+    years.
+    
+    Returns:
+    - Dataframe with a column for the new year and the forecasted
+    population
+    --------------------------------------------------------------------
+    Notes:
+    - 
+    --------------------------------------------------------------------
+    """
+    input_cols = pop_dataframe.columns
+    year_cols = [''.join([c for c in h if c.isdigit()]) for h in input_cols]
+    print(year_cols)
+    

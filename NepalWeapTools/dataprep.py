@@ -1127,3 +1127,22 @@ class FutUrbDem(UrbDemData):
         ----------------------------------------------------------------
         """
         ####### Method start ##################################################
+        
+        #Get the directory relative to the current script (dataprep.py)
+        current_dir = os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__))
+            )
+        #Construct the path to the InputData folder
+        input_data_loc = os.path.join(current_dir, r'InputData\Demand')
+        #Set the location for output files:
+        self.output_loc = os.path.join(current_dir, r'OutputData')
+        
+        #Read in the population data file:
+        pop_change = pd.read_excel(
+            os.path.join(input_data_loc, pop_change_file)
+            ).set_index('Ward')
+        print(pop_change)
+        util.pop_forecast(pop_change)
+        
+        
+        
