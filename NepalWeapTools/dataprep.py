@@ -29,7 +29,6 @@ import geopandas as gpd
 import os
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 import rasterio as rio
 
 ####### For when module is run directly: ######################################
@@ -323,27 +322,7 @@ class HydroData:
         ax.set_title(axis_title)
         ax.legend()
         
-        #Format x-axis labels/ticks based on the timeframe of the data:
-        if num_years < 1:
-            #Tick every month:
-            ax.xaxis.set_major_locator(mdates.MonthLocator())
-            ax.xaxis.set_major_formatter(mdates.DateFormatter('%b'))
-        elif num_years <=2:
-            #Tick every second month:
-            ax.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
-            ax.xaxis.set_major_formatter(mdates.DateFormatter('%b-%y'))
-        elif num_years <= 10:
-            #Tick every year:
-            ax.xaxis.set_major_locator(mdates.YearLocator())
-            ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
-        elif num_years <=20:
-            #Tick every second year
-            ax.xaxis.set_major_locator(mdates.YearLocator(2))
-            ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
-        else:
-            #Tick every 5th year:
-            ax.xaxis.set_major_locator(mdates.YearLocator(5))
-            ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+        util.x_axis_dater(ax, num_years)
         
         ax.set_xlabel('Date')
         ax.set_ylabel(f'{this_var.measure} [{this_var.unit}]')

@@ -23,6 +23,8 @@ commonly required by the classes in the other package modules
 import datetime as dt
 import numpy as np
 import pandas as pd
+import matplotlib as mpl
+import matplotlib.dates as mdates
 import rasterio
 from rasterio.io import MemoryFile
 from rasterio.mask import mask
@@ -478,4 +480,38 @@ def pop_forecast(
         * ((1 + pop_dataframe['Change rate']) ** years_elapsed)
         )
     return pop_dataframe
-        
+
+####### X-axis date formatting: ###############################################
+def x_axis_dater(axes, years):
+    """
+    Set appropriate date ticks/lables for the x-axis depending on the
+    time interval
+    
+    Parameters:
+    - axes: Matplotlib axes object with datetime objects as the x-axis
+    values
+    - years: number of years
+    --------------------------------------------------------------------
+    --------------------------------------------------------------------
+    """
+    #Format x-axis labels/ticks based on the timeframe of the data:
+    if years < 1:
+        #Tick every month:
+        axes.xaxis.set_major_locator(mdates.MonthLocator())
+        axes.xaxis.set_major_formatter(mdates.DateFormatter('%b'))
+    elif years <=2:
+        #Tick every second month:
+        axes.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
+        axes.xaxis.set_major_formatter(mdates.DateFormatter('%b-%y'))
+    elif years <= 10:
+        #Tick every year:
+        axes.xaxis.set_major_locator(mdates.YearLocator())
+        axes.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+    elif years <=20:
+        #Tick every second year
+        axes.xaxis.set_major_locator(mdates.YearLocator(2))
+        axes.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+    else:
+        #Tick every 5th year:
+        axes.xaxis.set_major_locator(mdates.YearLocator(5))
+        axes.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
