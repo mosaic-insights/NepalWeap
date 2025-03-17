@@ -301,10 +301,17 @@ class HydroData:
             
         axis_title = (
             f'Time series plot of {var} at '
-            f'{len(self.datasets.base_data.columns)} gauges'
+            f'{len(self.datasets[0].base_data.columns)} gauges'
             )
-        ax.plot(self.datasets[0].base_data)
+        
+        for_plotting = self.datasets[0].base_data
+        
+        for col in for_plotting.columns:
+            #Plot the current column, specifying label
+            ax.plot(for_plotting.index, for_plotting[col], label=col)
+        
         ax.set_title(axis_title)
+        ax.legend()
         
             
 
