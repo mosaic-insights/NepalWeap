@@ -465,9 +465,6 @@ def pop_forecast(
         pop_change_rates.append(rate_pa)
         
     pop_dataframe['Change rate'] = pop_change_rates
-    print(f'Most recent census year: {latest_year}')
-    print(f'Forecast year: {future_year}')
-    print(f'Years elapsed: {years_elapsed}')
     
     #Replace any growth rates with absolute value > 0.1 with 0.1,
     #retaining their sign:
@@ -480,5 +477,5 @@ def pop_forecast(
         pop_dataframe[str(latest_year)]
         * ((1 + pop_dataframe['Change rate']) ** years_elapsed)
         )
-    print(pop_dataframe)
+    return pop_dataframe
         

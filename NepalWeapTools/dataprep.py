@@ -1048,6 +1048,7 @@ class FutUrbDem(UrbDemData):
         municipality:str,
         start_date:str,
         end_date:str,
+        pop_data_file:str,
         
         pop_change_file:str,
         fut_pop_year:int,
@@ -1079,6 +1080,9 @@ class FutUrbDem(UrbDemData):
         Tulsipur etc.) of interest
         - start_date: start date for the WEAP modelling (inclusive)
         - end_date: end date for modelling (inclusive)
+        - pop_data_file: filename.ext for excel file with total pop,
+        number of households, and average household size for the latest
+        census year
         
         - pop_change_file: filename.ext for excel file containing
         population figures for each ward across two sequential censuses
@@ -1137,12 +1141,39 @@ class FutUrbDem(UrbDemData):
         #Set the location for output files:
         self.output_loc = os.path.join(current_dir, r'OutputData')
         
-        #Read in the population data file:
+        #Read in the future population data file:
         pop_change = pd.read_excel(
             os.path.join(input_data_loc, pop_change_file)
             ).set_index('Ward')
-        #print(pop_change)
-        util.pop_forecast(pop_change, fut_pop_year)
         
+        forec_tab_pop = util.pop_forecast(pop_change, fut_pop_year)
         
+        #Read in the current population data:
+        pop_deets = pd.read_excel(
+            os.path.join(input_data_loc, pop_data_file)
+            ).set_index('Ward')[[ 
+                'Average household size'
+                ]]
+        self.pop_forec_table = forec_tab_pop.merge(
+            pop_deets,
+            left_index=True,
+            right_index=True,
+            how='outer',
+            )
+            
+        self.pop_forec_table['Number of households'] = (
+            self.pop_forec_table[str(fut_pop_year)]
+            / self.pop_forec_table['Average household size']
+            ).astype('int')
+        
+        table_for_UrbDem = self.pop_forec_table[[
+            str(fut_pop_year),
+            'Average household size',
+            'Number of households'
+            ]].rename(
+                {str(fut_pop_year): 'Total population'},
+                axis='columns'
+                )
+        
+        print(table_for_UrbDem)
         
