@@ -636,7 +636,7 @@ class UrbDemData:
         municipality:str,
         start_date:str,
         end_date:str,
-        pop_data_file:str,
+        pop_data_file,
         student_data_file:str,
         wards_data_file:str,
         utility_data_files:list,
@@ -666,7 +666,8 @@ class UrbDemData:
         - start_date: start date for the WEAP modelling (inclusive)
         - end_date: end date for modelling (inclusive)
         - pop_data_file: filename.ext for excel file containing
-        population summaries per ward
+        population summaries per ward (can also be a prepared pandas
+        dataframe passed from a child class
         - student_data_file: filename.ext for excel file containing
         number of students per ward
         - wards_data_file: filename.ext for shapefile of ward boundaries
@@ -766,14 +767,20 @@ class UrbDemData:
         self.census_year = census_year
         
         ####### Domestic demands: #############################################
-        #Read in the excel file:
-        pop_data = pd.read_excel(os.path.join(input_data_loc, pop_data_file))
-        pop_data = pop_data[[
-            'Ward',
-            'Total population',
-            'Number of households',
-            'Average household size'
-            ]]
+        
+        if type(pop_data_file) == str:
+            #Read in the excel file:
+            pop_data = pd.read_excel(os.path.join(input_data_loc, pop_data_file))
+            pop_data = pop_data[[
+                'Ward',
+                'Total population',
+                'Number of households',
+                'Average household size'
+                ]].set_index('Ward')
+        
+        else:
+            #Read in the excel file:
+            pop_data = pop_data_file
         
         #Calculate a domestic demand column:
         pop_data['Household pop'] = (
@@ -805,7 +812,7 @@ class UrbDemData:
                 'Not plumbed pop',
                 ],
             axis='columns'
-            ).set_index('Ward')
+            )
         
         ####### Institutional demands (educational): ##########################
         #Read in the excel file:
@@ -895,9 +902,8 @@ class UrbDemData:
         
         #Bring the population in and calculate 'other' commercial demand:
         temp_pop = pop_data[[
-            'Ward',
             'Total population'
-            ]].sort_values(by='Ward').set_index('Ward')
+            ]]
         ward_scaled_nums = ward_scaled_nums[dem_col_names].merge(
             temp_pop,
             left_index=True,
@@ -943,6 +949,7 @@ class UrbDemData:
             demand_data['Commercial demand [m3/d]']
             ) * self.indust_dem_propn
         
+        ####### Total demand: #################################################
         #Bring the demands together and store with the ward geometry:
         temp_wards = self.wards.rename(
             {'NEW_WARD_N': 'Ward'},
@@ -1039,7 +1046,7 @@ class UrbDemData:
 class FutUrbDem(UrbDemData):
     """
     Version of UrbDemData which first projects future population numbers
-    and uses those for the UrbDemData instance
+    and uses those for the UrbDemData instance's domestic demand.
     --------------------------------------------------------------------
     --------------------------------------------------------------------
     """
@@ -1128,6 +1135,9 @@ class FutUrbDem(UrbDemData):
         InputData\\Demand folder
         - Start and end dates must be in a valid ISO8601 format as per
         datetime.datetime.fromisoformat()
+        - Forecasted populations are NOT used to recalculate future 
+        student populations or hotel/hospital numbers. The forecast will
+        therefore mainly affect domestic demand
         ----------------------------------------------------------------
         """
         ####### Method start ##################################################
@@ -1140,6 +1150,8 @@ class FutUrbDem(UrbDemData):
         input_data_loc = os.path.join(current_dir, r'InputData\Demand')
         #Set the location for output files:
         self.output_loc = os.path.join(current_dir, r'OutputData')
+        
+        self.year = fut_pop_year
         
         #Read in the future population data file:
         pop_change = pd.read_excel(
@@ -1166,7 +1178,7 @@ class FutUrbDem(UrbDemData):
             / self.pop_forec_table['Average household size']
             ).astype('int')
         
-        table_for_UrbDem = self.pop_forec_table[[
+        pop_table_for_UrbDem = self.pop_forec_table[[
             str(fut_pop_year),
             'Average household size',
             'Number of households'
@@ -1175,5 +1187,38 @@ class FutUrbDem(UrbDemData):
                 axis='columns'
                 )
         
-        print(table_for_UrbDem)
+        super().__init__(
+            municipality,
+            start_date,
+            end_date,
+            
+            pop_table_for_UrbDem,
+            
+            student_data_file,
+            wards_data_file,
+            utility_data_files,
+            perc_full_plumb,
+            num_hotels,
+            num_hotel_beds,
+            num_hospitals,
+            num_hospital_beds,
+            demand_student,
+            demand_full_plumb_home,
+            demand_not_plumb_home,
+            demand_hotel_bed,
+            demand_hospital_bed,
+            demand_other_comm,
+            other_comm_denom,
+            munic_dem_propn,
+            indust_dem_propn,
+            census_year
+            )
+    
+    def __str__(self):
+        """Define what to show when instance is presented as a string"""
+        output = (
+            'Future urban demand data instance for '
+            f'{self.municipality} in {self.year}'
+            )
+        return output
         
