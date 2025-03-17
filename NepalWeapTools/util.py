@@ -433,7 +433,7 @@ def pop_forecast(
                 f'encountered was in {item}.'
                 )
     
-    latest_year = int(year_cols[-1])
+    latest_year = max([int(a) for a in year_cols])
     years_elapsed = future_year - latest_year
     
     #Assign the new columns, then sort so we have ascending years:
@@ -475,5 +475,10 @@ def pop_forecast(
         lambda x: 0.1 if x > 0.1 else (-0.1 if x < -0.1 else x)
         )
     
+    #Calculate the forecasted growth:
+    pop_dataframe[str(future_year)] = (
+        pop_dataframe[str(latest_year)]
+        * ((1 + pop_dataframe['Change rate']) ** years_elapsed)
+        )
     print(pop_dataframe)
         
