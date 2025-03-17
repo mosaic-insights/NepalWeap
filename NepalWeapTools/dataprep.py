@@ -29,6 +29,7 @@ import geopandas as gpd
 import os
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import rasterio as rio
 
 ####### For when module is run directly: ######################################
@@ -290,6 +291,12 @@ class HydroData:
         Notes:
         - Will plot to a provided fig/ax if provided, otherwise creates
         a new fig/ax subplot
+        - Current version assumes that there is only one variable 
+        (streamflow). Method will need to be extended if additional 
+        hydro variables are captured.
+        - Current version will show the year as the x-axis ticks
+        regardless of the number of years in the selected range. Future
+        versions should more dynamically select the ticks and labels.
         ----------------------------------------------------------------
         """
         ####### Method start ##################################################
@@ -303,8 +310,9 @@ class HydroData:
             f'Time series plot of {var} at '
             f'{len(self.datasets[0].base_data.columns)} gauges'
             )
-        
-        for_plotting = self.datasets[0].base_data
+        this_var = self.datasets[0]
+        for_plotting = this_var.base_data
+        for_plotting.index = pd.to_datetime(for_plotting.index)
         
         for col in for_plotting.columns:
             #Plot the current column, specifying label
@@ -312,6 +320,12 @@ class HydroData:
         
         ax.set_title(axis_title)
         ax.legend()
+        
+        ax.xaxis.set_major_locator(mdates.YearLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+        
+        ax.set_xlabel('Date')
+        ax.set_ylabel(f'{this_var.measure} [{this_var.unit}]')
         
             
 
