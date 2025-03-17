@@ -1142,7 +1142,7 @@ class FutUrbDem(UrbDemData):
             os.path.join(input_data_loc, pop_change_file)
             ).set_index('Ward')
         #print(pop_change)
-        util.pop_forecast(pop_change)
+        util.pop_forecast(pop_change, fut_pop_year)
         
         
         

@@ -393,10 +393,20 @@ def areal_interp(
     
 ####### Population forecasting: ###############################################
 #-----------------------------------------------------------------------
-def pop_forecast(pop_dataframe):
+def pop_forecast(
+    pop_dataframe,
+    future_year:int,
+    growth_cap=0.1):
     """
     Estimate populations in future years based on levels in previous
     years.
+    
+    Parameters:
+    - pop_dataframe: Pandas dataframe with historical population figures
+    for each ward, for at least two different census years.
+    - future_year: The future year for which a forecast is desrired
+    - growth_cap: maximum absolute value for positive or negative
+    growth to be used in forcasting.
     
     Returns:
     - Dataframe with a column for the new year and the forecasted
@@ -410,6 +420,7 @@ def pop_forecast(pop_dataframe):
     print('Forecasting future population...')
     input_cols = pop_dataframe.columns
     year_cols = [''.join([c for c in h if c.isdigit()]) for h in input_cols]
+    
     #Check that the remaining strings are valid years:
     for item in year_cols:
         #Check that the resulting year is four digits long:
@@ -421,6 +432,9 @@ def pop_forecast(pop_dataframe):
                 'other non-year numeric characters in. The first issue '
                 f'encountered was in {item}.'
                 )
+    
+    latest_year = int(year_cols[-1])
+    years_elapsed = future_year - latest_year
     
     #Assign the new columns, then sort so we have ascending years:
     pop_dataframe.columns = year_cols
@@ -451,5 +465,15 @@ def pop_forecast(pop_dataframe):
         pop_change_rates.append(rate_pa)
         
     pop_dataframe['Change rate'] = pop_change_rates
+    print(f'Most recent census year: {latest_year}')
+    print(f'Forecast year: {future_year}')
+    print(f'Years elapsed: {years_elapsed}')
+    
+    #Replace any growth rates with absolute value > 0.1 with 0.1,
+    #retaining their sign:
+    pop_dataframe['Change rate'] = pop_dataframe['Change rate'].apply(
+        lambda x: 0.1 if x > 0.1 else (-0.1 if x < -0.1 else x)
+        )
+    
     print(pop_dataframe)
         
