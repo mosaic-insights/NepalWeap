@@ -294,9 +294,6 @@ class HydroData:
         - Current version assumes that there is only one variable 
         (streamflow). Method will need to be extended if additional 
         hydro variables are captured.
-        - Current version will show the year as the x-axis ticks
-        regardless of the number of years in the selected range. Future
-        versions should more dynamically select the ticks and labels.
         ----------------------------------------------------------------
         """
         ####### Method start ##################################################
@@ -311,6 +308,11 @@ class HydroData:
             f'{len(self.datasets[0].base_data.columns)} gauges'
             )
         this_var = self.datasets[0]
+        start_date = this_var.date_range[0]
+        end_date = this_var.date_range[-1]
+        num_years = (int(end_date[:4]) - int(start_date[:4]))
+        
+        
         for_plotting = this_var.base_data
         for_plotting.index = pd.to_datetime(for_plotting.index)
         
@@ -321,8 +323,27 @@ class HydroData:
         ax.set_title(axis_title)
         ax.legend()
         
-        ax.xaxis.set_major_locator(mdates.YearLocator())
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+        #Format x-axis labels/ticks based on the timeframe of the data:
+        if num_years < 1:
+            #Tick every month:
+            ax.xaxis.set_major_locator(mdates.MonthLocator())
+            ax.xaxis.set_major_formatter(mdates.DateFormatter('%b'))
+        elif num_years <=2:
+            #Tick every second month:
+            ax.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
+            ax.xaxis.set_major_formatter(mdates.DateFormatter('%b-%y'))
+        elif num_years <= 10:
+            #Tick every year:
+            ax.xaxis.set_major_locator(mdates.YearLocator())
+            ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+        elif num_years <=20:
+            #Tick every second year
+            ax.xaxis.set_major_locator(mdates.YearLocator(2))
+            ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+        else:
+            #Tick every 5th year:
+            ax.xaxis.set_major_locator(mdates.YearLocator(5))
+            ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
         
         ax.set_xlabel('Date')
         ax.set_ylabel(f'{this_var.measure} [{this_var.unit}]')
