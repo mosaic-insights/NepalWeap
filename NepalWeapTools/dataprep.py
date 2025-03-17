@@ -277,6 +277,37 @@ class HydroData:
         """Define what shows when an instance is shown as a string"""
         return f'Hydro data with {len(self.datasets)} measurements .'
 
+    def vis(self, var='Streamflow', axes=None):
+        """
+        Visualise data for each station on a line chart.
+        
+        Parameters:
+        - var: Name of the variable to plot. Must be loaded.
+        - ax: Matplotlib axes object to plot on, if plotting to a
+        specific fig/ax is required
+        
+        ----------------------------------------------------------------
+        Notes:
+        - Will plot to a provided fig/ax if provided, otherwise creates
+        a new fig/ax subplot
+        ----------------------------------------------------------------
+        """
+        ####### Method start ##################################################
+        #Determine behaviour based on whether an axes object is supplied
+        if axes is not None:
+            ax = axes
+        else:
+            fig, ax = plt.subplots()
+            
+        axis_title = (
+            f'Time series plot of {var} at '
+            f'{len(self.datasets.base_data.columns)} gauges'
+            )
+        ax.plot(self.datasets[0].base_data)
+        ax.set_title(axis_title)
+        
+            
+
 #------------------------------------------------------------------------------
 ####### Meteo data: ###########################################################
 #------------------------------------------------------------------------------
