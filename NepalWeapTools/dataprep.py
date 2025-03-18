@@ -114,28 +114,34 @@ class MeasVar:
         ----------------------------------------------------------------
         """
         ####### Method start ##################################################
+        #Generate text for axis title:
         axis_title = (
             f'Time series plot of {self.measure} at '
             f'{len(self.base_data.columns)} sites'
             )
+        #Store useful info:
         start_date = self.date_range[0]
         end_date = self.date_range[-1]
         num_years = (int(end_date[:4]) - int(start_date[:4]))
         
-        
+        #Instance of the dataframe with date object index:
         for_plotting = self.base_data
         for_plotting.index = pd.to_datetime(for_plotting.index)
         
+        #Go through each station and plot its values:
         for col in for_plotting.columns:
             #Plot the current column, specifying label
             ax.plot(for_plotting.index, for_plotting[col], label=col)
         
+        #Activate title and enable leend
         ax.set_title(axis_title)
         ax.legend()
         
+        #Set the x-axis ticks and labels appropriately:
         util.x_axis_dater(ax, num_years)
-        
         ax.set_xlabel('Date')
+        
+        #Set the y-axis label appropriately
         if self.unit != 'Unspecified':
             ax.set_ylabel(f'{self.measure} [{self.unit}]')
         else:
@@ -616,6 +622,102 @@ class LulcData:
             icimod_lulc_class_dict
         )
         
+    def vis(self, subcatch='all', axes=None):
+        """
+        Visualise the distrubtion of pixels as a pie chart
+        
+        Parameters:
+        - subcatch: name of a subcatchment as defined by this
+        instance's subcatchments attribute
+        
+        ----------------------------------------------------------------
+        Notes:
+        - If no subcatchment is specified, or if the specified one is 
+        not in the existing list, this will summarise across all
+        subcatchments. 
+        - A treemap would have been preferable to a pie chart but also
+        required an additional module oustide of standard conda, so it
+        was decided to stick with the pie chart
+        ----------------------------------------------------------------
+        """
+        ####### Method start ##################################################
+        #Standardise casing of text:
+        needle = subcatch.title()
+        haystack = self.raw_stats.rename(
+            {a: a.title() for a in self.raw_stats.index},
+            axis='index'
+            )
+        #Use the axes if provided, otherwise create one:
+        if axes is not None:
+            ax = axes
+        else:
+            fig, ax = plt.subplots()
+        
+        #Summarise all values and plot those if 'all', nothing, or a
+        #value not in the raw_stats index is specified:
+        if needle == 'All' or needle not in haystack.index:
+            print('Summarising data for all catchments. Either no '
+                'specific subcatchment was specifed, or specified '
+                'value was not in the dataset provided.'
+                )
+            
+            #Get useful values:
+            catchment_summary = haystack.sum()
+            total_pix = catchment_summary.sum()
+            none_sum = catchment_summary['None']
+            none_perc = round(((none_sum/total_pix)*100))
+            
+            #Remove None values to clean up the chart:
+            for_plotting = catchment_summary.drop('None')
+            
+            #Set the overarching figure title:
+            fig.suptitle(
+                'Distribution of land cover types in '
+                f'{self.input_vector_file_name.split('_')[0]}'
+                )
+        
+        #Plot just that subcatchment if it's been specified:
+        else:
+            print(f'Summarising data for {needle} subcatchment.')
+            
+            #Get useful values:
+            this_subcatch = haystack.loc[needle]
+            total_pix = this_subcatch.sum()
+            none_sum = this_subcatch['None']
+            none_perc = round(((none_sum/total_pix)*100))
+            
+            #Remove None values to clean up the chart:
+            for_plotting = this_subcatch.drop('None')
+            
+            #Set the overarching figure title:
+            fig.suptitle(
+                'Distribution of land cover types in '
+                f'{self.input_vector_file_name.split('_')[0]}\n'
+                f'({needle} subcatchment)'
+                )
+            
+        #Create the pie chart:
+        wedges, texts = ax.pie(for_plotting)
+        
+        #Set the legend outside the axes to the right:
+        ax.legend(
+            wedges,
+            for_plotting.index,
+            loc='center left',
+            bbox_to_anchor=(1, 0.5)
+            )
+        #Use the axes 'title' to set a subtitle that shows what
+        #percentage of pixels had meaningful classifications:
+        ax.set_title(
+            f'{none_perc}% of pixels were classified',
+            **{'size': 'small'},
+            pad=0
+            )
+        #Show the pie chart:
+        plt.show()
+        
+        
+    
     def to_weap_data(self, start_year:int=2000, end_year:int=2021):
         """
         Reformat the base_data to match WEAP's required CSV format, and
