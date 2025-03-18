@@ -100,6 +100,45 @@ class MeasVar:
             how='left'
             )
         
+    def vis(self, ax):
+        """
+        Visualise data for each station on a line chart.
+        
+        Parameters:
+        - ax: Matplotlib axes object to plot on
+        
+        ----------------------------------------------------------------
+        Notes:
+        - Axes object must be provided. Instances of hydro or meteo data
+        will create axes as required then use this method to plot.
+        ----------------------------------------------------------------
+        """
+        ####### Method start ##################################################
+        axis_title = (
+            f'Time series plot of {self.measure} at '
+            f'{len(self.base_data.columns)} sites'
+            )
+        start_date = self.date_range[0]
+        end_date = self.date_range[-1]
+        num_years = (int(end_date[:4]) - int(start_date[:4]))
+        
+        
+        for_plotting = self.base_data
+        for_plotting.index = pd.to_datetime(for_plotting.index)
+        
+        for col in for_plotting.columns:
+            #Plot the current column, specifying label
+            ax.plot(for_plotting.index, for_plotting[col], label=col)
+        
+        ax.set_title(axis_title)
+        ax.legend()
+        
+        util.x_axis_dater(ax, num_years)
+        
+        ax.set_xlabel('Date')
+        ax.set_ylabel(f'{self.measure} [{self.unit}]')
+        
+        
     def to_weap_data(self):
         """
         Reformat the base_data to match WEAP's required CSV format, and
@@ -277,12 +316,11 @@ class HydroData:
         """Define what shows when an instance is shown as a string"""
         return f'Hydro data with {len(self.datasets)} measurements .'
 
-    def vis(self, var='Streamflow', axes=None):
+    def vis(self, axes=None):
         """
         Visualise data for each station on a line chart.
         
         Parameters:
-        - var: Name of the variable to plot. Must be loaded.
         - ax: Matplotlib axes object to plot on, if plotting to a
         specific fig/ax is required
         
@@ -302,30 +340,7 @@ class HydroData:
         else:
             fig, ax = plt.subplots()
             
-        axis_title = (
-            f'Time series plot of {var} at '
-            f'{len(self.datasets[0].base_data.columns)} gauges'
-            )
-        this_var = self.datasets[0]
-        start_date = this_var.date_range[0]
-        end_date = this_var.date_range[-1]
-        num_years = (int(end_date[:4]) - int(start_date[:4]))
-        
-        
-        for_plotting = this_var.base_data
-        for_plotting.index = pd.to_datetime(for_plotting.index)
-        
-        for col in for_plotting.columns:
-            #Plot the current column, specifying label
-            ax.plot(for_plotting.index, for_plotting[col], label=col)
-        
-        ax.set_title(axis_title)
-        ax.legend()
-        
-        util.x_axis_dater(ax, num_years)
-        
-        ax.set_xlabel('Date')
-        ax.set_ylabel(f'{this_var.measure} [{this_var.unit}]')
+        self.datasets[0].vis(ax)
         
             
 
@@ -440,11 +455,45 @@ class MeteoData:
             #Add the MeasVar to the list of this instance's linked datasets:
             self.datasets.append(dataset)
         
-        def __str__(self):
-            """
-            Define what shows when an instance is shown as a string
-            """
-            return f'Meteo data with {len(self.datasets)} measurements .'
+    def __str__(self):
+        """
+        Define what shows when an instance is shown as a string
+        """
+        return f'Meteo data with {len(self.datasets)} measurements .'
+        
+    def vis(self):
+        """
+        Visualise data for each station on a line chart, with a
+        separate plot for each variable.
+        
+        ----------------------------------------------------------------
+        Notes:
+        - Assumes that all variables are to be plotted. Future versions
+        should allow this to be specified when the method is called.
+        - Currently does not allow the user to specify a figure or axes;
+        given that there could be multiple variables this is currently
+        all defined within this method.
+        ----------------------------------------------------------------
+        """
+        ####### Method start ##################################################
+        #Create an empty figure, and start tracking the number of
+        #subplot rows required:
+        fig = plt.figure()
+        rows = 0
+        num_vars = len(self.datasets)
+        fig_height = 5 * num_vars
+        fig.set_figheight(fig_height)
+        fig.set_figwidth(12)
+        
+        #Go through each variable:
+        for var in self.datasets:
+            
+            rows +=1
+            this_ax = fig.add_subplot(num_vars, 1, rows)
+            
+            var.vis(this_ax)
+        
+        
 
 #------------------------------------------------------------------------------
 ####### LULC data: ############################################################
