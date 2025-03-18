@@ -1207,6 +1207,8 @@ class UrbDemData:
         ----------------------------------------------------------------
         """
         ####### Method start ##################################################
+        #Set up a wide figure to show ward and utility demands side-by-
+        #side
         fig, (w_ax, u_ax) = plt.subplots(1, 2,
             **{'figsize': (12, 5)}
             )
@@ -1222,8 +1224,7 @@ class UrbDemData:
         max_x = wards_for_plot.total_bounds[2]
         max_y = wards_for_plot.total_bounds[3]
         
-        wards_for_plot.plot(ax=w_ax, cmap=demand_cmap)
-        ut_for_plot.plot(ax=u_ax, cmap=demand_cmap)
+        
         
         x_range = max_x - min_x
         y_range = max_y - min_y
@@ -1239,7 +1240,48 @@ class UrbDemData:
             ax.set_xlim((x_left, x_right))
             ax.set_ylim((y_bottom, y_top))
             ax.set_facecolor('#D3D3D3')
-            
+            ax.set_xticks([])
+            ax.set_yticks([])
+         
+        wards_for_plot.plot(
+            ax=w_ax,
+            cmap=demand_cmap,
+            column='Total demand [m3/d]',
+            legend=True,
+            legend_kwds = {
+                'label': 'Total demand [m3/d]',
+                'location': 'bottom',
+                'fraction': 0.1,
+                'pad': 0.05
+                }
+            )
+        ut_for_plot.plot(
+            ax=u_ax,
+            cmap=demand_cmap,
+            column='Total demand [m3/d]',
+            legend=True,
+            legend_kwds = {
+                'label': 'Total demand [m3/d]',
+                'location': 'bottom',
+                'fraction': 0.1,
+                'pad': 0.05
+                }
+            )
+        
+        if not hasattr(self, 'year'):
+            fig.suptitle(
+                'Current Estimated Urban Demand for '
+                f'{self.municipality}'
+                )
+        else:
+            fig.suptitle(
+                f'Forecast Urban Demand for {self.municipality} '
+                f'in {self.year}'
+                )
+        
+        w_ax.set_title('- By ward -')
+        u_ax.set_title('- By utility service area -')
+        
         for x, y, label in zip(
             ut_for_plot.geometry.centroid.x,
             ut_for_plot.geometry.centroid.y,
