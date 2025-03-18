@@ -136,7 +136,10 @@ class MeasVar:
         util.x_axis_dater(ax, num_years)
         
         ax.set_xlabel('Date')
-        ax.set_ylabel(f'{self.measure} [{self.unit}]')
+        if self.unit != 'Unspecified':
+            ax.set_ylabel(f'{self.measure} [{self.unit}]')
+        else:
+            ax.set_ylabel(f'{self.measure}')
         
         
     def to_weap_data(self):
@@ -473,6 +476,8 @@ class MeteoData:
         - Currently does not allow the user to specify a figure or axes;
         given that there could be multiple variables this is currently
         all defined within this method.
+        -Ideally this would also allow the user to specify particular
+        stations to visualise.
         ----------------------------------------------------------------
         """
         ####### Method start ##################################################
