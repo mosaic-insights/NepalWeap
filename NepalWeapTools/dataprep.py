@@ -622,13 +622,15 @@ class LulcData:
             icimod_lulc_class_dict
         )
         
-    def vis(self, subcatch='all', axes=None):
+    def vis(self, subcatch='all', figure=None, axes=None):
         """
         Visualise the distrubtion of pixels as a pie chart
         
         Parameters:
         - subcatch: name of a subcatchment as defined by this
         instance's subcatchments attribute
+        - figure: matplotlib figure object 
+        - axes: matplotlib axes object
         
         ----------------------------------------------------------------
         Notes:
@@ -648,10 +650,16 @@ class LulcData:
             axis='index'
             )
         #Use the axes if provided, otherwise create one:
-        if axes is not None:
+        if axes is not None and figure is not None:
+            fig = figure
             ax = axes
-        else:
+        elif axes is None and figure is None:
             fig, ax = plt.subplots()
+        else:
+            raise ValueError(
+                'figure and axes objects must either both be specified, '
+                'or neither.'
+                )
         
         #Summarise all values and plot those if 'all', nothing, or a
         #value not in the raw_stats index is specified:
