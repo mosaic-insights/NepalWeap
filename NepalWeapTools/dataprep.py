@@ -1198,7 +1198,67 @@ class UrbDemData:
         #Assign the CRS and store in class instance:
         temp_utilities.set_crs(epsg=self.ward_demand.crs.to_epsg())
         self.utility_demand = temp_utilities
+    
+    def vis(self):
+        """
+        Visualise demand by ward and/or utility area
         
+        ----------------------------------------------------------------
+        ----------------------------------------------------------------
+        """
+        ####### Method start ##################################################
+        fig, (w_ax, u_ax) = plt.subplots(1, 2,
+            **{'figsize': (12, 5)}
+            )
+        
+        demand_cmap = 'YlGnBu'
+        map_proj = 3857
+        
+        wards_for_plot = self.ward_demand.to_crs(epsg=map_proj)
+        ut_for_plot = self.utility_demand.to_crs(epsg=map_proj)
+        
+        min_x = wards_for_plot.total_bounds[0]
+        min_y = wards_for_plot.total_bounds[1]
+        max_x = wards_for_plot.total_bounds[2]
+        max_y = wards_for_plot.total_bounds[3]
+        
+        wards_for_plot.plot(ax=w_ax, cmap=demand_cmap)
+        ut_for_plot.plot(ax=u_ax, cmap=demand_cmap)
+        
+        x_range = max_x - min_x
+        y_range = max_y - min_y
+        margin = 0.05
+        x_buff = x_range * margin
+        y_buff = y_range * margin
+        x_left = min_x - x_buff
+        x_right = max_x + x_buff
+        y_bottom = min_y - y_buff
+        y_top = max_y + y_buff
+        
+        for ax in fig.axes:
+            ax.set_xlim((x_left, x_right))
+            ax.set_ylim((y_bottom, y_top))
+            ax.set_facecolor('#D3D3D3')
+            
+        for x, y, label in zip(
+            ut_for_plot.geometry.centroid.x,
+            ut_for_plot.geometry.centroid.y,
+            ut_for_plot['Utility']
+            ):
+            u_ax.text(
+                x,
+                y,
+                label,
+                fontsize=8,
+                ha='center',
+                bbox={
+                    'facecolor': 'white',
+                    'edgecolor': 'none',
+                    'boxstyle': 'round',
+                    'pad': 0.1
+                    }
+                )
+    
     def to_weap_data(self):
         """
         Export csv files of demand by utility service area
