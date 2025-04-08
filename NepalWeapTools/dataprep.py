@@ -463,6 +463,26 @@ class MeteoData:
             )
             #Add the MeasVar to the list of this instance's linked datasets:
             self.datasets.append(dataset)
+            
+        for thing in self.datasets:
+            if thing.measure == 'Temp_min':
+                temp_min_df = thing.base_data
+            if thing.measure == 'Temp_max':
+                temp_max_df = thing.base_data
+        
+        temp_avg_df = (temp_min_df + temp_max_df) / 2
+        avg_temp_dataset = MeasVar(
+                temp_avg_df,
+                'Temp_mean',
+                self.date_range,
+                parent=self,
+                skipped_rows=skipped_rows
+            )
+        print(avg_temp_dataset)
+        print(avg_temp_dataset.base_data)
+        print([a for a in self.datasets])
+        
+                
         
     def __str__(self):
         """
