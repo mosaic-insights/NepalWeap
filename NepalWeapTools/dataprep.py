@@ -433,6 +433,7 @@ class MeteoData:
         
         ####### Loading data by variable: #####################################
         self.datasets = []
+        dataset_parking = []
         #Create a MeasVar instance for each of the desired measurements:
         for variable in checked_measures:
             #Get the worksheet corresponding to the current variable
@@ -461,16 +462,20 @@ class MeteoData:
                 parent=self,
                 skipped_rows=skipped_rows
             )
-            #Add the MeasVar to the list of this instance's linked datasets:
-            self.datasets.append(dataset)
-            
-        for thing in self.datasets:
+            #Add the MeasVar to the list of this instance's linked
+            #datasets:
+            dataset_parking.append(dataset)
+        
+        #Get temporary copies of temp min and max only:
+        for thing in dataset_parking:
             if thing.measure == 'Temp_min':
                 temp_min_df = thing.base_data
             if thing.measure == 'Temp_max':
                 temp_max_df = thing.base_data
         
+        #Calculate the mean temperature from corresponding min and max:
         temp_avg_df = (temp_min_df + temp_max_df) / 2
+        #Create a MeasVar instance for the mean temp:
         avg_temp_dataset = MeasVar(
                 temp_avg_df,
                 'Temp_mean',
@@ -478,9 +483,13 @@ class MeteoData:
                 parent=self,
                 skipped_rows=skipped_rows
             )
-        print(avg_temp_dataset)
-        print(avg_temp_dataset.base_data)
-        print([a for a in self.datasets])
+        
+        #Add WEAP-friendly MeasVar instances to datasets:
+        for invar in dataset_parking:
+            if invar.measure not in ['Temp_min', 'Temp_max']:
+                self.datasets.append(invar)
+        #Add the newly-calculated mean temperature to datasets:
+        self.datasets.append(avg_temp_dataset)
         
                 
         
