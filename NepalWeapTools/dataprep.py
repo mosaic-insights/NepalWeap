@@ -325,13 +325,15 @@ class HydroData:
         """Define what shows when an instance is shown as a string"""
         return f'Hydro data with {len(self.datasets)} measurements .'
 
-    def vis(self, axes=None):
+    def vis(self, axes=None, save:bool=True):
         """
         Visualise data for each station on a line chart.
         
         Parameters:
-        - ax: Matplotlib axes object to plot on, if plotting to a
+        - axes: Matplotlib axes object to plot on, if plotting to a
         specific fig/ax is required
+        - save: whether the output figure should be saved as a .png 
+        file in the OutputData folder
         
         ----------------------------------------------------------------
         Notes:
@@ -350,6 +352,16 @@ class HydroData:
             fig, ax = plt.subplots()
             
         self.datasets[0].vis(ax)
+        
+        #Save the figure unless save is False:
+        if save:
+            fig_filename = 'HydroData_visualisation.png'
+            plt.savefig(
+                rf'{self.output_loc}\{fig_filename}',
+                dpi=600,
+                bbox_inches='tight',
+                transparent=False
+                )
         
             
 
@@ -499,10 +511,14 @@ class MeteoData:
         """
         return f'Meteo data with {len(self.datasets)} measurements .'
         
-    def vis(self):
+    def vis(self, save:bool=True):
         """
         Visualise data for each station on a line chart, with a
         separate plot for each variable.
+        
+        Parameters:
+        - save: whether the output figure should be saved as a .png 
+        file in the OutputData folder
         
         ----------------------------------------------------------------
         Notes:
@@ -532,6 +548,15 @@ class MeteoData:
             this_ax = fig.add_subplot(num_vars, 1, rows)
             
             var.vis(this_ax)
+        
+        if save:
+            fig_filename = 'MeteoData_visualisation.png'
+            plt.savefig(
+                rf'{self.output_loc}\{fig_filename}',
+                dpi=600,
+                bbox_inches='tight',
+                transparent=False
+                )
         
         
 
@@ -651,7 +676,13 @@ class LulcData:
             icimod_lulc_class_dict
         )
         
-    def vis(self, subcatch='all', figure=None, axes=None):
+    def vis(
+        self,
+        subcatch='all',
+        figure=None,
+        axes=None,
+        save:bool=True
+        ):
         """
         Visualise the distrubtion of pixels as a pie chart
         
@@ -660,6 +691,8 @@ class LulcData:
         instance's subcatchments attribute
         - figure: matplotlib figure object 
         - axes: matplotlib axes object
+        - save: whether the output figure should be saved as a .png 
+        file in the OutputData folder
         
         ----------------------------------------------------------------
         Notes:
@@ -751,7 +784,18 @@ class LulcData:
             pad=0
             )
         #Show the pie chart:
-        plt.show()
+        fig.show(warn=False)
+        
+        #Save the figure unless save is False:
+        if save:
+            fig_filename = 'LandUse_visualisation.png'
+            fig.savefig(
+                rf'{self.output_loc}\{fig_filename}',
+                dpi=600,
+                bbox_inches='tight',
+                transparent=False
+                )
+        
         
         
     
@@ -1233,9 +1277,12 @@ class UrbDemData:
         temp_utilities.set_crs(epsg=self.ward_demand.crs.to_epsg())
         self.utility_demand = temp_utilities
     
-    def vis(self):
+    def vis(self, save:bool=True):
         """
         Visualise demand by ward and/or utility area
+        
+        - save: whether the output figure should be saved as a .png 
+        file in the OutputData folder
         
         ----------------------------------------------------------------
         ----------------------------------------------------------------
@@ -1250,16 +1297,18 @@ class UrbDemData:
         demand_cmap = 'YlGnBu'
         map_proj = 3857
         
+        #Ensure both wards and utility service areas are in the same
+        #crs:
         wards_for_plot = self.ward_demand.to_crs(epsg=map_proj)
         ut_for_plot = self.utility_demand.to_crs(epsg=map_proj)
         
+        #Get the bounds of the wards:
         min_x = wards_for_plot.total_bounds[0]
         min_y = wards_for_plot.total_bounds[1]
         max_x = wards_for_plot.total_bounds[2]
         max_y = wards_for_plot.total_bounds[3]
         
-        
-        
+        #Calculate parameters for mapping:
         x_range = max_x - min_x
         y_range = max_y - min_y
         margin = 0.05
@@ -1270,13 +1319,15 @@ class UrbDemData:
         y_bottom = min_y - y_buff
         y_top = max_y + y_buff
         
+        #Set up the axes for each plot so they cover the same area:
         for ax in fig.axes:
             ax.set_xlim((x_left, x_right))
             ax.set_ylim((y_bottom, y_top))
             ax.set_facecolor('#D3D3D3')
             ax.set_xticks([])
             ax.set_yticks([])
-         
+        
+        #Build the demand-by-ward map:
         wards_for_plot.plot(
             ax=w_ax,
             cmap=demand_cmap,
@@ -1289,6 +1340,8 @@ class UrbDemData:
                 'pad': 0.05
                 }
             )
+            
+        #Build the demand-by-utility map:
         ut_for_plot.plot(
             ax=u_ax,
             cmap=demand_cmap,
@@ -1302,20 +1355,33 @@ class UrbDemData:
                 }
             )
         
+        #Determine title and filename based on whether this is a
+        #current or future urban demand instance:
         if not hasattr(self, 'year'):
-            fig.suptitle(
+            main_title = (
                 'Current Estimated Urban Demand for '
                 f'{self.municipality}'
                 )
+            fig_filename = (
+                f'UrbanDemand_{self.municipality}'
+                '_current.png'
+                )
         else:
-            fig.suptitle(
+            main_title = (
                 f'Forecast Urban Demand for {self.municipality} '
                 f'in {self.year}'
                 )
+            fig_filename = (
+                f'UrbanDemand_{self.municipality}'
+                f'_Future_{self.year}.png'
+                )
+        fig.suptitle(main_title)
         
+        #Set subtitles for each map:
         w_ax.set_title('- By ward -')
         u_ax.set_title('- By utility service area -')
         
+        #Plot the utility service area labels:
         for x, y, label in zip(
             ut_for_plot.geometry.centroid.x,
             ut_for_plot.geometry.centroid.y,
@@ -1333,6 +1399,15 @@ class UrbDemData:
                     'boxstyle': 'round',
                     'pad': 0.1
                     }
+                )
+                
+        #Save the figure unless save is False:
+        if save:
+            fig.savefig(
+                rf'{self.output_loc}\{fig_filename}',
+                dpi=600,
+                bbox_inches='tight',
+                transparent=False
                 )
     
     def to_weap_data(self):
