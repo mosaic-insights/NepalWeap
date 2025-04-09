@@ -899,7 +899,8 @@ class UrbDemData:
         other_comm_denom=3,
         munic_dem_propn:float=0.075,
         indust_dem_propn:float=0.225,
-        census_year:int=2021
+        census_year:int=2021,
+        current:bool=True
         ):
         """
         Collate and load data required for urban water demand
@@ -946,6 +947,8 @@ class UrbDemData:
         the sum of domestic, institutional, and commercial.
         - census_year: year the census we are using data for was
         conducted
+        - current: whether this is for the current year (False) or a
+        future year (False)
         
         ----------------------------------------------------------------
         Notes:
@@ -981,6 +984,8 @@ class UrbDemData:
         self.maxx = self.wards.total_bounds[2]
         self.maxy = self.wards.total_bounds[3]
         
+        #Store whether this is a current or future instance:
+        self.current = current
         
         
         #Check that plumbing values are correct
@@ -1355,6 +1360,13 @@ class UrbDemData:
         #get the number of empty strings required for output headers:
         num_blanks  = [ '' for i in range(len(out_cols))]
         
+        #Get the year to insert into the filename if this is a future
+        #forecast:
+        if hasattr(self, 'year'):
+            year_str = f'_{self.year}'
+        else:
+            year_str = '_current'
+        
         #Go through each utility area and write an output file:
         for _, row in self.utility_demand.iterrows():
             #create a dataframe with a row for each date:
@@ -1375,7 +1387,7 @@ class UrbDemData:
                 )
             
             #Write to file with meaningful name:
-            this_filename = f'{this_name}_demand'
+            this_filename = f'{this_name}_demand{year_str}'
             this_df.to_csv(
                 rf'{self.output_loc}\{this_filename}.csv',
                 index=False
