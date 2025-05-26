@@ -7,10 +7,10 @@ Parent Package: NepalWeapTools
 __author__ = ['Richard Farr', 'Kristen Joyce']
 __copyright__ = 'Alluvium Consulting (TBC)'
 __credits__ = ['Petter Nyman']
-__version__ = 0.01
+__version__ = 1.00
 __maintainer__ = 'Richard Farr'
 __email__ = 'richard.farr@alluvium.com.au'
-__status__ = 'In development'
+__status__ = 'Completed'
 
 Last update: 28/02/2025
 
