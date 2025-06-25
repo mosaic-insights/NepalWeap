@@ -17,7 +17,7 @@ This package has the following key functions:
     4. The end date
 3.	View the loaded data by calling print or display on <instance name>.datasets[0].base_data, where <instance name> is the variable name you chose when creating the class instance.
     1.	Note that this structure has allowed for additional future hydro variables, even though currently only streamflow volume is included. The visualisation method will require an update in this case.
-![](ImagesForDocs\Hydro_Streamflow_TimeSeriesPlot.png "Time series plot showing observed streamflow at 2 sites over 2 years.")
+![](ImagesForDocs/Hydro_Streamflow_TimeSeriesPlot.png "Time series plot showing observed streamflow at 2 sites over 2 years.")
 
 ### Meteo (weather) data
 1. Ensure the excel file(s) with the data for the required municipalities and stations is in InputData\Meteo
