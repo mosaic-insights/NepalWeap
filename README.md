@@ -28,6 +28,7 @@ This package has the following key functions:
     4. End date
     5. List of weather variables to include
 3. View the loaded data by calling print or display on any dataset.base_data in the  <instance name>.datasets list, where <instance name> is the variable name you chose when for class instance. 
+![](ImagesForDocs/Meteo_Humidity_TimeSeriesPlot.png "Time series plot showing observed relative humidity at 4 sites over 13 months.")
 
 ### Land use data
 1. Ensure the GeoTIFF (.tif) land use/land cover raster, and the Shapefile (.shp) of sub-catchments with all its sidecar files are in InputData\LandUse
@@ -35,6 +36,7 @@ This package has the following key functions:
     1. File name and extension for the GeoTIFF
     2. File name and extension for the shapefile
 3. View the loaded data by calling print or display on <instance name>.raw_stats
+![](ImagesForDocs/LandUse_PieChart.png "Pie chart showing the relative distribution of land cover types from known pixels.")
 
 ### Urban demand (current) data
 1. Ensure the excel files with population and student data, and the shapefiles delineating ward and utility service area boundaries, are in InputData\Demand
@@ -49,11 +51,13 @@ This package has the following key functions:
     5. A python list of filenames and extensions for each of the utility service area files
     6. Other parameters as outlined in the class docstring
 3. View the loaded data by calling print or display on <instance name>.ward_demand or <instance name>.utility_demand
+![](ImagesForDocs/Demand_Current_Maps.png "Maps showing estimated urban water demand by ward (left) and by utility service area (right).")
 
 ### Urban demand (future) data
 As for current urban demand outlined above, except the following must also be specified when creating the class instance:
 1. Filename and extension for an excel file (.xlsx) with population numbers for each ward across two different census years
 2. The year for which a future demand forecast is desired
+![](ImagesForDocs/Demand_Future_Maps.png "Maps showing projected future urban water demand by ward (left) and by utility service area (right).")
 
 ### Visualising loaded data
 All data types can be visualised easily using the <instance name>.vis() method. The output of this method varies for each type of data:
@@ -84,4 +88,5 @@ The demand datasets contain daily water demand data for different water utility 
 
 ## Visualising WEAP Outputs
 Clear, simple visualisations can be produced by calling the plot_weap_data() or plot_water_balance() functions in the outputvis module once the WEAP outputs have been cleaned and placed in the relevant folder.
+![](ImagesForDocs/WaterBalance_ColumnChart.png "Chart showing water supply and demand as estimated by WEAP modelling.")
 
