@@ -1,4 +1,4 @@
-InputData/
-OutputData/
+OutputData/*
+!OutputData/.gitkeep
 Notebooks/
 __pycache__/
