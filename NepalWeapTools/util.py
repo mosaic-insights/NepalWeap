@@ -215,13 +215,15 @@ def get_osm_locations(tag_dict, bbox):
     """
     #Build a string of tag searches for the query:
     searches = []
+    bbox2 = tuple(float(x) for x in bbox)
     for key, value in tag_dict.items():
-        string = f'\n  node["{key}"="{value}"]{bbox};'
+        string = f'\n  node["{key}"="{value}"]{bbox2};'
         searches.append(string)
     bracket_bit = '(' + ''.join(searches) + '\n);'
     
     #Put the query string together:
     query = '[out:json];\n' + bracket_bit + '\nout body;'
+    
     #Initialise overpass api:
     api = overpy.Overpass()
     #Fetch OSM data:
